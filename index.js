@@ -301,7 +301,7 @@ bot.on('message', (msg) => {
 
     if (msg.chat.id == env.GROUP_ID) {
         const args = msg.text.split(" ");
-        const command = args.shift().toLowerCase();
+        const command = args.shift().toLowerCase().split("@")[0];
         switch (command) {
             case '/add_teacher':
                 var arg = "";
@@ -369,6 +369,17 @@ bot.on('message', (msg) => {
         });
         return;
     }
+
+    if (msg.text == "/menu") {
+        bot.sendMessage(chat_id, "Що тобі потрібно сталкер?", {
+            reply_markup: {
+                inline_keyboard: main_menu
+            }
+        });
+        return;
+    }
+
+
 
     var md = db.prepare("SELECT type FROM Mode WHERE id = ?").get(chat_id).type;
     md = md.split(":");
