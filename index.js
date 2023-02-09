@@ -70,7 +70,7 @@ function back_button(link){
     ]
 }
 
-function sucess_message(chat_id, text) {
+function success_message(chat_id, text) {
     db.prepare("UPDATE Mode SET type = ? WHERE id = ?").run("back_to_menu", chat_id);
     bot.sendMessage(chat_id, text, {
         reply_markup: {
@@ -196,7 +196,7 @@ bot.on('callback_query', (callbackQuery) => {
                 });
                 return;
             }
-            bot.editMessageText("Добре, надішли мені пропозицію.\n\n<i>якщо хочеш відправити декілька пропозицій пиши одним текстом</i>", {
+            bot.editMessageText("Що в тебе є сталкер?\n\n<i>відправляй декілька пропозицій одним текстом</i>", {
                 chat_id: chat_id,
                 message_id: callbackQuery.message.message_id,
                 reply_markup: {
@@ -386,22 +386,22 @@ bot.on('message', (msg) => {
     switch (md[0]) {  
         case 'offer_text':
             db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, md[0], date.getTime());
-            sucess_message(chat_id, "Твоя пропозиція була відправлена!");
+            success_message(chat_id, "Твоя пропозиція була відправлена!");
             send_message_to_group("Пропозиція", msg.text)
             break;
         case 'request_to_join_ss_text':
             db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, md[0], date.getTime());
-            sucess_message(chat_id, "Твоя заявка була відправлена!");
+            success_message(chat_id, "Твоя заявка була відправлена!");
             send_message_to_group(`Заявка на вступ <i>@${msg.from.username}</i>`, msg.text)
             break;
         case 'complaint_ss_text':
             db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, md[0], date.getTime());
-            sucess_message(chat_id, "Твою скаргу було відправлено!");
+            success_message(chat_id, "Твою скаргу було відправлено!");
             send_message_to_group("Скарга на СС", msg.text)
             break;
         case 'complaint_teacher_text':
             db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, md[0], date.getTime());
-            sucess_message(chat_id, `Твою скаргу на ${md[1]} було відправлено!`);
+            success_message(chat_id, `Твою скаргу на ${md[1]} було відправлено!`);
             send_message_to_group(`Скарга на <i>${md[1]}</i>`, msg.text)
             break;
     }
