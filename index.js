@@ -1,84 +1,23 @@
 const TelegramBot = require('node-telegram-bot-api');
 require('dotenv').config();
 const env = process.env;
-var dgram = require('dgram');
-var client = dgram.createSocket('udp4');;
 
+const menu = require("./menu");
 
-const db = require("better-sqlite3")("sqlite.db");
-
-db.exec(
-    `
-        CREATE TABLE IF NOT EXISTS Mode (
-            id INTEGER PRIMARY KEY NOT NULL, 
-            type TEXT NOT NULL
-        );
-    `
-);
-
-db.exec(
-    `
-        CREATE TABLE IF NOT EXISTS Teacher (
-            name TEXT PRIMARY KEY NOT NULL
-        );
-    `
-);
-
-db.exec(
-    `
-        CREATE TABLE IF NOT EXISTS BlockList (
-            id INTEGER NOT NULL,
-            type TEXT NOT NULL,
-            time INTEGER NOT NULL
-        );
-    `
-);
+const database = require("./database");
+const db = database.sqlite;
+database.init();
 
 const bot = new TelegramBot(env.BOT_TOKEN, {polling: true});
 
-const main_menu = [
-    [
-        {
-            text: 'Запит на вступ до СС',
-            callback_data: 'request_to_join_ss_text',
-        },
-        // {
-        //     text: 'Що таке СС?',
-        //     callback_data: 'complaint_menu',
-        // }
-    ],
-    [
-        {
-            text: 'Поскаржитися',
-            callback_data: 'complaint_menu'
-        },
-        {
-            text: 'Пропозиція',
-            callback_data: 'offer_text',
-        },
-    ]
-]
-
-function back_button(link){
-    return [
-        [
-            {
-                text: 'Назад',
-                callback_data: link,
-            }
-        ]
-    ]
-}
-
 function success_message(chat_id, text) {
-    db.prepare("UPDATE Mode SET type = ? WHERE id = ?").run("back_to_menu", chat_id);
     bot.sendMessage(chat_id, text, {
         reply_markup: {
             inline_keyboard: [
                 [
                     {
                         text: 'У меню',
-                        callback_data: 'menu',
+                        callback_data: menu.link('success_message', 'menu')
                     }
                 ]
             ]
@@ -105,170 +44,228 @@ function has_block(type, chat_id, time) {
     return false;
 }
 
-bot.on('callback_query', (callbackQuery) => {
-    const chat_id = callbackQuery.message.chat.id;
+bot.getMe().then((_bot) => {
+    console.log(_bot.first_name + " is running...");
+});
 
-    var last_mode = db.prepare("SELECT type FROM Mode WHERE id = ?").get(chat_id).type;
+bot.on('callback_query', (callback) => {
+    if (env.MAINTENANCE == "true" && callback.from.id != env.ADMIN_ID) {
+        bot.answerCallbackQuery(callback.id, {
+            text: "Бот на технічному обслуговуванні. Спробуйте пізніше.",
+            show_alert: true
+          });
+        return;
+    }
 
-    var data = callbackQuery.data;
-    data = data.split(":");
-    switch (data[0]) {
+    const chat_id = callback.message.chat.id;
+    var result = db.prepare("SELECT * FROM User WHERE id = ?").get(callback.from.id);
+
+    if (result == undefined) {
+        bot.sendMessage(chat_id, "Будь ласка, перезапустіть бота за допомогою команди /start. Або створіть нове меню /menu.");
+        return;
+    }
+
+    var callback_data = callback.data;
+    var data = callback_data.split(":");
+
+    var from_link = data[0];
+    var to_link = data[1];
+
+    console.log(callback_data)
+
+    switch (to_link) {
         case 'menu':
             bot.editMessageText("Що тобі потрібно сталкер?", {
                 chat_id: chat_id,
-                message_id: callbackQuery.message.message_id,
+                message_id: callback.message.message_id,
                 reply_markup: {
-                    inline_keyboard: main_menu
+                    inline_keyboard: menu.main_menu
                 }
-            }).then(() => {
-                db.prepare("UPDATE Mode SET type = ? WHERE id = ?").run(data[0], chat_id);
+            });
+            break;
+        case 'ss_menu':
+            bot.editMessageText("Ну що сталкер, вибирай.", {
+                chat_id: chat_id,
+                message_id: callback.message.message_id,
+                reply_markup: {
+                    inline_keyboard: menu.ss_menu(to_link)
+                }
             });
             break;
         case 'complaint_menu':
             bot.editMessageText("Вибери тип скарги.", {
                 chat_id: chat_id,
-                message_id: callbackQuery.message.message_id,
+                message_id: callback.message.message_id,
                 reply_markup: {
-                    inline_keyboard: [
-                        [
-                            {
-                                text: 'Скарга на викладача',
-                                callback_data: 'complaint_teacher_menu'
-                            },
-                            {
-                                text: 'Скарга на СС',
-                                callback_data: 'complaint_ss_text'
-                            }
-                        ],
-                        [
-                            {
-                                text: 'Назад',
-                                callback_data: "menu",
-                            }
-                        ]
-                    ]
+                    inline_keyboard: menu.complaint_menu(to_link)
                 }
-            }).then(() => {
-                db.prepare("UPDATE Mode SET type = ? WHERE id = ?").run(data[0], chat_id);
             });
             break;
         case 'complaint_teacher_menu':
+            var menu_page = Number(data[2]);
+            var total_pages = 0;
+
+            var teachers_in_one_page = 8;
+
             var teachers = db.prepare("SELECT * FROM Teacher ORDER BY name COLLATE NOCASE").all();
             var teacher_menu = [];
 
             teachers.map((teacher, index) => {
-                if (index % 3 == 0) {
+                if (index % teachers_in_one_page == 0) {
+                    total_pages++;
+                }
+
+                if (index < menu_page * teachers_in_one_page || index >= (menu_page + 1) * teachers_in_one_page){
+                    return;
+                }
+
+                if (index % 2 == 0) {
                     teacher_menu.push([]);
                 }
+
                 teacher_menu[teacher_menu.length - 1].push(
                     {
                         text: teacher.name,
-                        callback_data: `complaint_teacher_text:${teacher.name}`
+                        callback_data: menu.link(to_link, `complaint_teacher_text:${teacher.id}:${menu_page}`)
                     }
                 );
             });
 
-            teacher_menu.push([
-                {
-                    text: '<',
-                    callback_data: 'complaint_menu',
-                }
-            ]);
+            if (menu_page >= total_pages || menu_page < 0) {
+                return;
+            }
 
-            bot.editMessageText("Вибери викладача.", {
+            teacher_menu.push([]);
+
+            if (menu_page - 1 < 0) {
+                teacher_menu[teacher_menu.length - 1].push(
+                    {
+                        text: ' ',
+                        callback_data: menu.link(undefined, `${to_link}:${menu_page - 1}`),
+                    },
+                );
+            }else{
+                teacher_menu[teacher_menu.length - 1].push(
+                    {
+                        text: '←',
+                        callback_data: menu.link(undefined, `${to_link}:${menu_page - 1}`),
+                    },
+                );
+            }
+
+            teacher_menu[teacher_menu.length - 1].push(
+                menu.back_button(to_link, "complaint_menu", true)
+            );
+
+            if (menu_page + 1 >= total_pages) {
+                teacher_menu[teacher_menu.length - 1].push(
+                    {
+                        text: ' ',
+                        callback_data: menu.link(undefined, `${to_link}:${menu_page + 1}`),
+                    },
+                );
+            }else{
+                teacher_menu[teacher_menu.length - 1].push(
+                    {
+                        text: '→',
+                        callback_data: menu.link(undefined, `${to_link}:${menu_page + 1}`),
+                    },
+                );
+            }
+
+            bot.editMessageText(`Вибери викладача [${menu_page+1}/${total_pages}]`, {
                 chat_id: chat_id,
-                message_id: callbackQuery.message.message_id,
+                message_id: callback.message.message_id,
                 reply_markup: {
                     inline_keyboard: teacher_menu
                 }
-            }).then(() => {
-                db.prepare("UPDATE Mode SET type = ? WHERE id = ?").run(data[0], chat_id);
             });
             break;
         case 'offer_text':
-            if (has_block(data[0], chat_id, 10)){
+            if (has_block(to_link, chat_id, 10)){
                 bot.editMessageText("Ти можеш відправити лише одну пропозицію у 10 хвилин.", {
                     chat_id: chat_id,
-                    message_id: callbackQuery.message.message_id,
+                    message_id: callback.message.message_id,
                     reply_markup: {
-                        inline_keyboard: back_button(last_mode)
+                        inline_keyboard: menu.back_button(to_link, from_link)
                     }
                 });
                 return;
             }
             bot.editMessageText("Що в тебе є сталкер?\n\n<i>відправляй декілька пропозицій одним текстом</i>", {
                 chat_id: chat_id,
-                message_id: callbackQuery.message.message_id,
+                message_id: callback.message.message_id,
                 reply_markup: {
-                    inline_keyboard: back_button(last_mode)
+                    inline_keyboard: menu.back_button(to_link, from_link)
                 },
                 parse_mode: "HTML"
-            }).then((message) => {
-                db.prepare("UPDATE Mode SET type = ? WHERE id = ?").run(`offer_text:${message.message_id}`, chat_id);
+            }).then(() => {
+                db.prepare("UPDATE User SET type = ? WHERE id = ?").run(callback_data, chat_id);
             });
             break;
         case 'request_to_join_ss_text':
-            if (has_block(data[0], chat_id, 30)){
+            if (has_block(to_link, chat_id, 30)){
                 bot.editMessageText("Ти можеш відправити лише один запит на вступ у 30 хвилин.", {
                     chat_id: chat_id,
-                    message_id: callbackQuery.message.message_id,
+                    message_id: callback.message.message_id,
                     reply_markup: {
-                        inline_keyboard: back_button(last_mode)
+                        inline_keyboard: menu.back_button(to_link, from_link)
                     }
                 });
                 return;
             }
             bot.editMessageText(`Добре, надішли мені: \n1. ПІБ.\n2. Группу\n3. Твій дискорд <b>"DiscordTag"</b>\n\n<i>писати як список не обов'язково</i>`, {
                 chat_id: chat_id,
-                message_id: callbackQuery.message.message_id,
+                message_id: callback.message.message_id,
                 reply_markup: {
-                    inline_keyboard: back_button(last_mode)
+                    inline_keyboard: menu.back_button(to_link, from_link)
                 },
                 parse_mode: "HTML"
-            }).then((message) => {
-                db.prepare("UPDATE Mode SET type = ? WHERE id = ?").run(`request_to_join_ss_text:${message.message_id}`, chat_id);
+            }).then(() => {
+                db.prepare("UPDATE User SET type = ? WHERE id = ?").run(callback_data, chat_id);
             });
             break;
         case 'complaint_ss_text':
-            if (has_block(data[0], chat_id, 10)){
+            if (has_block(to_link, chat_id, 10)){
                 bot.editMessageText("Ти можеш відправити лише одну скаргу у 10 хвилин.", {
                     chat_id: chat_id,
-                    message_id: callbackQuery.message.message_id,
+                    message_id: callback.message.message_id,
                     reply_markup: {
-                        inline_keyboard: back_button(last_mode)
+                        inline_keyboard: menu.back_button(to_link, from_link)
                     }
                 });
                 return;
             }
             bot.editMessageText("Добре, надішли мені скаргу.", {
                 chat_id: chat_id,
-                message_id: callbackQuery.message.message_id,
+                message_id: callback.message.message_id,
                 reply_markup: {
-                    inline_keyboard: back_button(last_mode)
+                    inline_keyboard: menu.back_button(to_link, from_link)
                 }
-            }).then((message) => {
-                db.prepare("UPDATE Mode SET type = ? WHERE id = ?").run(`complaint_ss_text:${message.message_id}`, chat_id);
+            }).then(() => {
+                db.prepare("UPDATE User SET type = ? WHERE id = ?").run(callback_data, chat_id);
             });
             break;
         case 'complaint_teacher_text':
-            if (has_block(data[0], chat_id, 10)){
+            if (has_block(to_link, chat_id, 10)){
                 bot.editMessageText("Ти можеш відправити лише одну скаргу у 10 хвилин.", {
                     chat_id: chat_id,
-                    message_id: callbackQuery.message.message_id,
+                    message_id: callback.message.message_id,
                     reply_markup: {
-                        inline_keyboard: back_button(last_mode)
+                        inline_keyboard: menu.back_button(to_link, `${from_link}:${data[3]}`)
                     }
                 });
                 return;
             }
-            bot.editMessageText(`Добре, надішли мені скаргу на ${data[1]}`, {
+            var teacher = db.prepare("SELECT name FROM Teacher WHERE id = ?").get(data[2]).name;
+            bot.editMessageText(`Добре, надішли мені скаргу на ${teacher}`, {
                 chat_id: chat_id,
-                message_id: callbackQuery.message.message_id,
+                message_id: callback.message.message_id,
                 reply_markup: {
-                    inline_keyboard: back_button(last_mode)
+                    inline_keyboard: menu.back_button(to_link, `${from_link}:${data[3]}`)
                 }
-            }).then((message) => {
-                db.prepare("UPDATE Mode SET type = ? WHERE id = ?").run(`complaint_teacher_text:${data[1]}:${message.message_id}`, chat_id);
+            }).then(() => {
+                db.prepare("UPDATE User SET type = ? WHERE id = ?").run(callback_data, chat_id);
             });
             break;
     }
@@ -276,28 +273,21 @@ bot.on('callback_query', (callbackQuery) => {
 
 
 bot.on('message', (msg) => {
-    const chat_id = msg.chat.id;
-    var date = new Date();
-
-    if (msg.sticker) {
-        var row = db.prepare("SELECT time FROM BlockList WHERE id = ? AND type = ?").get(chat_id, "sticker");
-        if (row != undefined) {
-            if (date.getTime() - row.time < 300000) {
-                bot.sendMessage(chat_id, "Ти можеш відправити лише одне повідомлення у 5 хвилин.");
-                return;
-            }
-            db.prepare("DELETE FROM BlockList WHERE id = ? AND type = ?").run(chat_id, "sticker");
-        }
-        bot.sendSticker(chat_id, "CAACAgIAAxkBAAEHoDpj4mRoFzW42vNRduT7PfucN7YlYAAC5wcAAiTCxjbn3DJLdJf8PC4E");
-
-        var message = Buffer.from(msg.sticker.file_id);
-        client.send(message, 0, message.length, 7894, 'localhost', function(err, bytes) {
-            //client.close();
-            db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, "sticker", date.getTime());
-        });
+    if (env.ADMIN_ID == 0) {
+        console.log(`ADMIN_ID: ${msg.from.id}`);
+    }
+    
+    if (env.GROUP_ID == 0) {
+        console.log(`GROUP_ID: ${msg.chat.id}`);
         return;
     }
 
+    if (env.MAINTENANCE == "true" && msg.from.id != env.ADMIN_ID){
+        bot.sendMessage(msg.chat.id, "Бот на технічному обслуговуванні.");
+        return;
+    }
+
+    const chat_id = msg.chat.id;
 
     if (msg.chat.id == env.GROUP_ID) {
         const args = msg.text.split(" ");
@@ -325,8 +315,8 @@ bot.on('message', (msg) => {
             case '/list_teachers':
                 var teachers = db.prepare("SELECT * FROM Teacher ORDER BY name COLLATE NOCASE").all();
                 var teacher_text = "Викладачі:\n";
-                teachers.map((teacher) => {
-                    teacher_text += `${teacher.name}\n`;
+                teachers.map((teacher, index) => {
+                    teacher_text += `${index+1}: ${teacher.name}\n`;
                 });
                 bot.sendMessage(chat_id, teacher_text);
                 break
@@ -357,52 +347,49 @@ bot.on('message', (msg) => {
             default:
                 break;
         }
+
         return;
     }
 
-    if (msg.text == "/start") {
-        db.prepare("INSERT OR IGNORE INTO Mode (id, type) VALUES (?, ?)").run(chat_id, "menu");
+    if (msg.text == "/start" || msg.text == "/menu") {
+        db.prepare("INSERT OR IGNORE INTO User (id, type) VALUES (?, ?)").run(chat_id, "");
         bot.sendMessage(chat_id, "Що тобі потрібно сталкер?", {
             reply_markup: {
-                inline_keyboard: main_menu
-            }
-        });
-        return;
-    }
-
-    if (msg.text == "/menu") {
-        bot.sendMessage(chat_id, "Що тобі потрібно сталкер?", {
-            reply_markup: {
-                inline_keyboard: main_menu
+                inline_keyboard: menu.main_menu
             }
         });
         return;
     }
 
 
+    var data = db.prepare("SELECT type FROM User WHERE id = ?").get(chat_id).type;
+    data = data.split(":");
 
-    var md = db.prepare("SELECT type FROM Mode WHERE id = ?").get(chat_id).type;
-    md = md.split(":");
-    switch (md[0]) {  
+    switch (data[1]) {  
         case 'offer_text':
-            db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, md[0], date.getTime());
+            db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, data[1], date.getTime());
+            db.prepare("UPDATE User SET type = ? WHERE id = ?").run("", chat_id);
             success_message(chat_id, "Твоя пропозиція була відправлена!");
             send_message_to_group("Пропозиція", msg.text)
             break;
         case 'request_to_join_ss_text':
-            db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, md[0], date.getTime());
+            db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, data[1], date.getTime());
+            db.prepare("UPDATE User SET type = ? WHERE id = ?").run("", chat_id);
             success_message(chat_id, "Твоя заявка була відправлена!");
             send_message_to_group(`Заявка на вступ <i>@${msg.from.username}</i>`, msg.text)
             break;
         case 'complaint_ss_text':
-            db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, md[0], date.getTime());
+            db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, data[1], date.getTime());
+            db.prepare("UPDATE User SET type = ? WHERE id = ?").run("", chat_id);
             success_message(chat_id, "Твою скаргу було відправлено!");
             send_message_to_group("Скарга на СС", msg.text)
             break;
         case 'complaint_teacher_text':
-            db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, md[0], date.getTime());
-            success_message(chat_id, `Твою скаргу на ${md[1]} було відправлено!`);
-            send_message_to_group(`Скарга на <i>${md[1]}</i>`, msg.text)
+            db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, data[1], date.getTime());
+            db.prepare("UPDATE User SET type = ? WHERE id = ?").run("", chat_id);
+            var teacher = db.prepare("SELECT name FROM Teacher WHERE id = ?").get(data[2]).name;
+            success_message(chat_id, `Твою скаргу на ${teacher} було відправлено!`);
+            send_message_to_group(`Скарга на <i>${teacher}</i>`, msg.text)
             break;
     }
 });
