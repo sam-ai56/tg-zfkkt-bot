@@ -273,6 +273,7 @@ bot.on('callback_query', (callback) => {
 
 
 bot.on('message', (msg) => {
+    const date = new Date();
     if (env.ADMIN_ID == 0) {
         console.log(`ADMIN_ID: ${msg.from.id}`);
     }
@@ -364,7 +365,7 @@ bot.on('message', (msg) => {
 
     var data = db.prepare("SELECT type FROM User WHERE id = ?").get(chat_id).type;
     data = data.split(":");
-
+    console.log("data: " + data[1]);
     switch (data[1]) {  
         case 'offer_text':
             db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, data[1], date.getTime());
