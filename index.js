@@ -71,8 +71,6 @@ bot.on('callback_query', (callback) => {
     var from_link = data[0];
     var to_link = data[1];
 
-    console.log(callback_data)
-
     switch (to_link) {
         case 'menu':
             bot.editMessageText("Що тобі потрібно сталкер?", {
@@ -365,7 +363,7 @@ bot.on('message', (msg) => {
 
     var data = db.prepare("SELECT type FROM User WHERE id = ?").get(chat_id).type;
     data = data.split(":");
-    console.log("data: " + data[1]);
+
     switch (data[1]) {  
         case 'offer_text':
             db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, data[1], date.getTime());
