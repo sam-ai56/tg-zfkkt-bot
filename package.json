@@ -2,7 +2,7 @@
   "name": "tg-zfkkt-bot",
   "version": "0.0.0",
   "description": "",
-  "main": "index.js",
+  "main": "main.js",
   "scripts": {
     "test": "echo \"Error: no test specified\" && exit 1"
   },
@@ -10,6 +10,7 @@
   "license": "MIT",
   "dependencies": {
     "better-sqlite3": "^8.1.0",
+    "colors": "^1.4.0",
     "dotenv": "^16.0.3",
     "node-telegram-bot-api": "^0.61.0"
   }
