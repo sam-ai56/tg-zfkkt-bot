@@ -32,7 +32,7 @@ bot.on('callback_query', (callback) => {
 
     const chat_id = callback.message.chat.id;
 
-    if (db.prepare("SELECT * FROM User WHERE id = ?").get(callback.from.id) == undefined) {
+    if (db.prepare("SELECT * FROM User WHERE id = ?").get(callback.from.id) == undefined && callback.message.chat.type == "private") {
         bot.sendMessage(chat_id, "Будь ласка, перезапустіть бота за допомогою команди /start. Або створіть нове меню /menu.");
         return;
     }
@@ -85,17 +85,182 @@ function send_message_to_group(title, text) {
 }
 
 
+var posts = [];
+var timer_started = false;
+// O_o ...
+bot.on("channel_post", (post) => {
+    if (post.chat.id != env.CHANNEL_ID)
+        return;
+
+    if (!post.photo && !post.video){
+        db.prepare("SELECT * FROM GroupChat WHERE news_distribution = 1").all().map((chat) => {
+            bot.forwardMessage(chat.id, env.CHANNEL_ID, post.message_id);
+        });
+        return;
+    }
+
+    posts.push(post);
+    if (!timer_started){
+        timer_started = true;
+        setTimeout(() => {
+            db.prepare("SELECT * FROM GroupChat WHERE news_distribution = 1").all().map((chat) => {    
+                bot.sendMediaGroup(chat.id, posts.map((p) => {   
+                    return {
+                        type: p.photo? "photo" : "video",
+                        media: p.photo? p.photo[0].file_id : p.video.file_id,
+                        caption: p.caption? p.caption + `\n\n@zfkkt`: undefined,
+                        caption_entities: p.caption_entities,
+                    }
+                }));
+            });
+            posts = [];
+            timer_started = false;
+        }, 100);
+    }
+});
+
 bot.on('message', (msg) => {
     const date = new Date();
     const chat_id = msg.chat.id;
+    var username = msg.from.username? `@${msg.from.username}` : msg.from.first_name? msg.from.first_name : msg.from.last_name;
 
-    if (!msg.text) {
+    if (msg.text == "ебать тебя в рот") {
+        bot.sendMessage(chat_id, "Сам себе ебало в рот ебалоеб");
+    }
+
+    if (!msg.text && msg.chat.type == "private") {
         bot.sendSticker(chat_id, "CAACAgIAAxkBAAIPe2QOzghI9AGHX8qmR8RjOKeINamiAAI_KQACsJmoSwpWpVE_WNZyLwQ");
         return;
     }
 
-    if (middleware.mantenance_mode() && !middleware.is_admin(msg.from.id)) {
-        bot.sendMessage(msg.chat.id, "Бот на технічному обслуговуванні.");
+    const args = msg.text.split(" ");
+    const command = args.shift().toLowerCase().split("@")[0];
+
+    if (command == "/subscribe_schedule" && msg.chat.id != env.GROUP_ID) {
+        if (msg.chat.type != "supergroup" && msg.chat.type != "group")
+            return;
+
+        const is_subscribed = db.prepare("SELECT * FROM GroupChat WHERE id = ? AND schedule_distribution = 1").get(msg.chat.id);
+        if (is_subscribed != undefined) {
+            bot.sendMessage(chat_id, "Ви вже підписали групу на розсилку.", {
+                reply_to_message_id: msg.message_id
+            });
+            return;
+        }
+
+        bot.getChatMember(msg.chat.id, msg.from.id).then((member) => {
+            if (member.status != "administrator" && member.status != "creator" && msg.from.id != env.OWNER_ID) {
+                bot.sendMessage(chat_id, "Ти не адміністратор групи.", {
+                    reply_to_message_id: msg.message_id
+                });
+                return;
+            }
+
+            db.prepare("INSERT OR IGNORE INTO GroupChat (id) VALUES (?)").run(msg.chat.id);
+            bot.sendMessage(chat_id, "Привіт для того, щоб активувати розсилку для цього чату адміністратор повинен вибрати групу з меню після чого вона буде підписана на розсилку.", {
+                reply_markup: {
+                    inline_keyboard: [
+                        [
+                            {
+                                text: 'Підписатися на розсилку',
+                                callback_data: link.gen_link('group_menu', `get_group_distribution_gc:0`)
+                            }
+                        ]
+                    ]
+                }
+            });
+        });
+        return;
+    }
+
+    if (command == "/unsubscribe_schedule" && msg.chat.id != env.GROUP_ID) {
+        if (msg.chat.type != "supergroup" && msg.chat.type != "group")
+            return;
+        bot.getChatMember(msg.chat.id, msg.from.id).then((member) => {
+            if (member.status != "administrator" && member.status != "creator" && msg.from.id != env.OWNER_ID) {
+                bot.sendMessage(chat_id, "Ти не адміністратор групи.", {
+                    reply_to_message_id: msg.message_id
+                });
+                return;
+            }
+            
+            var group = db.prepare("SELECT * FROM GroupChat WHERE id = ?").get(msg.chat.id);
+            if (group == undefined) {
+                return;
+            }
+
+            const is_subscribed = db.prepare("SELECT * FROM GroupChat WHERE id = ? AND schedule_distribution = 0").get(msg.chat.id);
+            if (is_subscribed != undefined) {
+                bot.sendMessage(chat_id, "Ви вже відписали групу від розсилки.", {
+                    reply_to_message_id: msg.message_id
+                });
+                return;
+            }
+
+            db.prepare("INSERT OR IGNORE INTO GroupChat (id) VALUES (?)").run(msg.chat.id);
+            db.prepare("UPDATE GroupChat SET [group] = NULL, schedule_distribution = 0 WHERE id = ?").run(msg.chat.id);
+            bot.sendMessage(chat_id, `${username} відписав групу від розсилки.`, {
+                reply_to_message_id: msg.message_id
+            });
+        });
+        return;
+    }
+
+    if (command == "/subscribe_news" && msg.chat.id != env.GROUP_ID) {
+        if (msg.chat.type != "supergroup" && msg.chat.type != "group")
+            return;
+
+        const is_subscribed = db.prepare("SELECT * FROM GroupChat WHERE id = ? AND news_distribution = 1").get(msg.chat.id);
+        if (is_subscribed != undefined) {
+            bot.sendMessage(chat_id, "Ви вже підписали групу на розсилку новин.", {
+                reply_to_message_id: msg.message_id
+            });
+            return;
+        }
+
+        bot.getChatMember(msg.chat.id, msg.from.id).then((member) => {
+            if (member.status != "administrator" && member.status != "creator" && msg.from.id != env.OWNER_ID) {
+                bot.sendMessage(chat_id, "Ти не адміністратор групи.", {
+                    reply_to_message_id: msg.message_id
+                });
+                return;
+            }
+
+            db.prepare("INSERT OR IGNORE INTO GroupChat (id) VALUES (?)").run(msg.chat.id);
+            db.prepare("UPDATE GroupChat SET news_distribution = 1 WHERE id = ?").run(msg.chat.id);
+            bot.sendMessage(chat_id, "Група підписана на розсилку новин.", {
+                reply_to_message_id: msg.message_id
+            });
+        });
+        return;
+    }
+
+    if (command == "/unsubscribe_news" && msg.chat.id != env.GROUP_ID) {
+        if (msg.chat.type != "supergroup" && msg.chat.type != "group")
+            return;
+
+        const is_subscribed = db.prepare("SELECT * FROM GroupChat WHERE id = ? AND news_distribution = 0").get(msg.chat.id);
+        if (is_subscribed != undefined) {
+            bot.sendMessage(chat_id, "Ви вже відписали групу від розсилки новин.", {
+                reply_to_message_id: msg.message_id
+            });
+            return;
+        }
+
+        bot.getChatMember(msg.chat.id, msg.from.id).then((member) => {
+            if (member.status != "administrator" && member.status != "creator" && msg.from.id != env.OWNER_ID) {
+                bot.sendMessage(chat_id, "Ти не адміністратор групи.", {
+                    reply_to_message_id: msg.message_id
+                });
+                return;
+            }
+
+            db.prepare("INSERT OR IGNORE INTO GroupChat (id) VALUES (?)").run(msg.chat.id);
+            db.prepare("UPDATE GroupChat SET news_distribution = 0 WHERE id = ?").run(msg.chat.id);
+            bot.sendMessage(chat_id, "Група відписана від розсилки новин.", {
+                reply_to_message_id: msg.message_id
+            });
+        });
         return;
     }
 
@@ -105,8 +270,10 @@ bot.on('message', (msg) => {
         switch (command) {
             case '/add_teacher':
                 var arg = "";
-                args.map((a) => {
-                    arg += ` ${a}`;
+                args.map((a, i) => {
+                    if (i != 0)
+                        arg += " ";
+                    arg += `${a}`;
                 });
 
                 if (arg == "") {
@@ -124,6 +291,7 @@ bot.on('message', (msg) => {
 
             case '/list_teachers':
                 var teachers = db.prepare("SELECT * FROM Teacher ORDER BY name COLLATE NOCASE").all();
+                teachers.shift();
                 var teacher_text = "Викладачі:\n";
                 teachers.map((teacher, index) => {
                     teacher_text += `${index+1}: ${teacher.name}\n`;
@@ -133,8 +301,10 @@ bot.on('message', (msg) => {
 
             case '/remove_teacher':
                 var arg = "";
-                args.map((a) => {
-                    arg += ` ${a}`;
+                args.map((a, i) => {
+                    if (i != 0)
+                        arg += " ";
+                    arg += `${a}`;
                 });
 
                 if (arg == "") {
@@ -159,24 +329,6 @@ bot.on('message', (msg) => {
         }
         return;
     }
-
-    if (msg.text == "/start" || msg.text == "/menu") {
-        db.prepare("INSERT OR IGNORE INTO User (id) VALUES (?)").run(chat_id);
-        bot.sendMessage(chat_id, "Що тобі потрібно сталкер?", {
-            reply_markup: {
-                inline_keyboard: menu.main_menu(chat_id)
-            }
-        });
-        return;
-    }
-
-    if (db.prepare("SELECT * FROM User WHERE id = ?").get(msg.from.id) == undefined) {
-        bot.sendMessage(chat_id, "Будь ласка, перезапустіть бота за допомогою команди /start. Або створіть нове меню /menu.");
-        return;
-    }
-
-    const args = msg.text.split(" ");
-    const command = args.shift().toLowerCase().split("@")[0];
 
     if (command == "/admin_invite") {
         if (args[0] == undefined) {
@@ -217,6 +369,24 @@ bot.on('message', (msg) => {
     }
 
 
+    if (msg.chat.type != "private") 
+        return;
+    
+    if (msg.text == "/start" || msg.text == "/menu") {
+        db.prepare("INSERT OR IGNORE INTO User (id) VALUES (?)").run(chat_id);
+        bot.sendMessage(chat_id, "Що тобі потрібно сталкер?", {
+            reply_markup: {
+                inline_keyboard: menu.main_menu(chat_id)
+            }
+        });
+        return;
+    }
+
+    if (db.prepare("SELECT * FROM User WHERE id = ?").get(msg.from.id) == undefined) {
+        bot.sendMessage(chat_id, "Будь ласка, перезапустіть бота за допомогою команди /start. Або створіть нове меню /menu.");
+        return;
+    }
+
     var data = db.prepare("SELECT type FROM User WHERE id = ?").get(chat_id).type;
     data = data.split(":");
 
@@ -242,7 +412,16 @@ bot.on('message', (msg) => {
             send_message_to_group("Скарга на СС", msg.text)
             logger.log(msg, "Sended to group");
             break;
+        case 'complaint_bot_text':
+            console.log("LURA")
+            db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, data[1], date.getTime());
+            db.prepare("UPDATE User SET type = ? WHERE id = ?").run("", chat_id);
+            success_message(chat_id, "Твою скаргу було відправлено!");
+            send_message_to_group(`🥴🥴🥴👇 <i>@${msg.from.username}</i>`, msg.text)
+            logger.log(msg, "Sended to group");
+            break;
         case 'complaint_teacher_text':
+            console.log(chat_id, data[1], date.getTime())
             db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, data[1], date.getTime());
             db.prepare("UPDATE User SET type = ? WHERE id = ?").run("", chat_id);
             var teacher = db.prepare("SELECT name FROM Teacher WHERE id = ?").get(data[2]).name;

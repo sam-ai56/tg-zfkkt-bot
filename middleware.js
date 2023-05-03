@@ -33,5 +33,19 @@ module.exports = {
             db.prepare("DELETE FROM BlockList WHERE id = ? AND type = ?").run(chat_id, type);
         }
         return false;
-    }
+    },
+    has_group(chat_id) {
+        var row = db.prepare("SELECT [group] FROM User WHERE id = ?").get(chat_id).group;
+        if (row == null) {
+            return false;
+        }
+        return true;
+    },
+    has_distribution(chat_id) {
+        var row = db.prepare("SELECT distribution FROM User WHERE id = ? AND distribution = 0").get(chat_id);
+        if (row == undefined) {
+            return false;
+        }
+        return true;
+    },
 }

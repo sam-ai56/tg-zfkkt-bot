@@ -26,73 +26,72 @@ module.exports = {
             ]
         ];
 
-        if (middleware.is_owner(id)) {
-            def.push([
-                {
-                    text: 'Нарнія',
-                    callback_data: 'menu:owner_menu'
-                },
-                {
-                    text: 'Адмін меню',
-                    callback_data: 'menu:admin_menu'
-                },
-            ]);
-        }
+        // if (middleware.is_owner(id)) {
+        //     def.push([
+        //         {
+        //             text: 'Розклад',
+        //             callback_data: 'menu:schedule_menu',
+        //         },
+        //     ]);
+        // }
 
-        if (middleware.is_admin(id) && !middleware.is_owner(id)) {
-            def.push([
-                {
-                    text: 'Адмін меню',
-                    callback_data: 'menu:admin_menu'
-                },
-            ]);
-        }
+        def.push([
+            {
+                text: 'Розклад',
+                callback_data: 'menu:schedule_menu',
+            },
+        ]);
 
         return def;
     },
-    owner_menu() {
-        return [
-            [
-                {
-                    text: 'Створити код',
-                    callback_data: link.gen_link(link.to, 'create_admin_code')
-                },
-                {
-                    text: 'Пітвердити адміна',
-                    callback_data: link.gen_link(link.to, 'confirm_admin_menu')
-                },
-                {
-                    text: 'Адміни',
-                    callback_data: link.gen_link(link.to, 'list_admins')
-                },
-            ],
-            [
-                {
-                    text: 'Назад',
-                    callback_data: link.gen_link(link.to, 'menu')
-                }
-            ]
-        ]
-    },
-    admin_menu() {
-        return [
-            [
-                {
-                    text: 'Створити меню',
-                    callback_data: link.gen_link(link.to, 'create_menu')
-                },
-                {
-                    text: 'Видалити меню',
-                    callback_data: link.gen_link(link.to, 'delete_menu')
-                },
-            ],
-            [
-                {
-                    text: 'Назад',
-                    callback_data: link.gen_link(link.to, 'menu')
-                }
-            ]
-        ]
+    schedule_menu(id) {
+        var def = [[], []];
+
+        var day = new Date().getDay();
+
+        if (middleware.has_group(id)){
+            def[0].push({
+                text: 'Подивитись свій розклад',
+                callback_data: link.gen_link(link.to, `show_schedule:${day}`)
+            });
+            def[0].push({
+                text: 'Розклад іншої групи',
+                callback_data: link.gen_link(link.to, `get_group_schedule:0`)
+            });
+        }else{
+            def[0].push({
+                text: 'Подивитись розклад',
+                callback_data: link.gen_link(link.to, `get_group_schedule:0`)
+            });
+        }
+        
+        def[1].push({
+            text: 'Розклад дзвінків',
+            callback_data: link.gen_link(link.to, 'show_bells_schedule')
+        });
+
+        if (middleware.has_distribution(id)){
+            def[1].push({
+                text: "Підписатися на розсилку",
+                callback_data: link.gen_link(link.to, "get_group_distribution:0")
+            });
+        }else{
+            def[1].push({
+                text: "Відписатися від розсилки",
+                callback_data: link.gen_link(link.to, "unsubscribe_distribution")
+            });
+            // def[1].push({
+            //     text: "Налаштування",
+            //     callback_data: 'menu:settings_schedule'
+            // });
+        }
+
+        def.push([{
+            text: "Назад",
+            callback_data: link.gen_link(link.to, "menu")
+        }]);
+
+        return def;
     },
     complaint_menu() {
         return [
@@ -104,6 +103,10 @@ module.exports = {
                 {
                     text: 'Скарга на СС',
                     callback_data: link.gen_link(link.to, 'complaint_ss_text')
+                },
+                {
+                    text: 'Скарга на бота',
+                    callback_data: link.gen_link(link.to, 'complaint_bot_text')
                 }
             ],
             [
@@ -119,31 +122,11 @@ module.exports = {
             [
                 {
                     text: 'Запит на вступ до СС',
-                    callback_data: link.gen_link(link.to, `request_to_join_ss_text`)
+                    url: "https://bit.ly/43jV51B"
                 },
                 {
                     text: 'Що таке СС?',
                     callback_data: link.gen_link(link.to, 'ss_about')
-                }
-            ],
-            [
-                {
-                    text: 'Назад',
-                    callback_data: link.gen_link(link.to, "menu")
-                }
-            ]
-        ]
-    },
-    schedule_menu() {
-        return [
-            [
-                {
-                    text: 'Подивитись розклад',
-                    callback_data: link.gen_link(`schedule_text`)
-                },
-                {
-                    text: 'Налаштування',
-                    callback_data: link.gen_link(`schedule_text`)
                 }
             ],
             [

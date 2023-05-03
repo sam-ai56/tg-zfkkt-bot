@@ -1,6 +1,6 @@
 var list = [];
 
-module.exports = {
+module.exports = { 
     list,
     register(link, func) {
         list.push({
