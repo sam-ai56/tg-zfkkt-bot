@@ -14,9 +14,7 @@ const logger = require("./logger");
 
 const link = require("./link");
 const page = require("./page");
-const pages = require("./pages");
-
-pages.init()
+page.init()
 
 const timers = require("./timers");
 timers.init();
@@ -123,10 +121,6 @@ bot.on('message', (msg) => {
     const date = new Date();
     const chat_id = msg.chat.id;
     var username = msg.from.username? `@${msg.from.username}` : msg.from.first_name? msg.from.first_name : msg.from.last_name;
-
-    if (msg.text == "ебать тебя в рот") {
-        bot.sendMessage(chat_id, "Сам себе ебало в рот ебалоеб");
-    }
 
     if (!msg.text && msg.chat.type == "private") {
         bot.sendSticker(chat_id, "CAACAgIAAxkBAAIPe2QOzghI9AGHX8qmR8RjOKeINamiAAI_KQACsJmoSwpWpVE_WNZyLwQ");
@@ -413,11 +407,10 @@ bot.on('message', (msg) => {
             logger.log(msg, "Sended to group");
             break;
         case 'complaint_bot_text':
-            console.log("LURA")
             db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, data[1], date.getTime());
             db.prepare("UPDATE User SET type = ? WHERE id = ?").run("", chat_id);
             success_message(chat_id, "Твою скаргу було відправлено!");
-            send_message_to_group(`🥴🥴🥴👇 <i>@${msg.from.username}</i>`, msg.text)
+            send_message_to_group(`Скарга на бота <i>@${msg.from.username}</i>`, msg.text)
             logger.log(msg, "Sended to group");
             break;
         case 'complaint_teacher_text':
