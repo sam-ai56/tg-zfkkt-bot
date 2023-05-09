@@ -77,9 +77,7 @@ function success_message(chat_id, text) {
 }
 
 function send_message_to_group(title, text) {
-    bot.getChat(env.GROUP_ID).then((chat) => {
-        bot.sendMessage(chat.id, `<b>${title}</b>\n<em>${text}</em>`, {parse_mode: "HTML"});
-    });
+    bot.sendMessage(chat.id, `<b>${title}</b>\n<em>${text}</em>`, {parse_mode: "HTML"});
 }
 
 

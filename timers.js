@@ -38,7 +38,7 @@ module.exports = {
                     if (chat.last_name != undefined) {
                         name += "" + chat.last_name;
                     }
-                    var schedule_text = "В тебе розпочалась пара:\n\n";
+                    var schedule_text = "У тебе розпочалась пара:\n\n";
                     schedule_text += `╭─ <b>${schedule.time_id} пара </b>(${schedule.time_start_at} - ${schedule.time_end_at})\n`
                     schedule_text += `│ •  <b>Предмет</b>: ${schedule.subject_name != null? schedule.subject_name: "ПУСТО"}\n`
                     schedule_text += `│ •  <b>Вчитель</b>: ${schedule.teacher_name != null? schedule.teacher_name: " ПУСТО"}\n`
@@ -85,7 +85,7 @@ module.exports = {
                         parse_mode: "HTML",
                     }
 
-                    var schedule_text = `В вас розпочалась пара (${schedule.group_name}):\n\n`;
+                    var schedule_text = `У вас розпочалась пара (${schedule.group_name}):\n\n`;
                     schedule_text += `╭─ <b>${schedule.time_id} пара </b>(${schedule.time_start_at} - ${schedule.time_end_at})\n`
                     schedule_text += `│ •  <b>Предмет</b>: ${schedule.subject_name != null? schedule.subject_name: "НІЧОГО"}\n`
                     schedule_text += `│ •  <b>Вчитель</b>: ${schedule.teacher_name != null? schedule.teacher_name: "НІЧОГО"}\n`
