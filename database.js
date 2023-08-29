@@ -24,7 +24,7 @@ module.exports = {
                     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                     name TEXT
                 );
-                
+
                 CREATE TABLE IF NOT EXISTS BlockList (
                     id INTEGER NOT NULL,
                     type TEXT NOT NULL,
@@ -35,17 +35,17 @@ module.exports = {
                     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                     name TEXT
                 );
-                
+
                 CREATE TABLE IF NOT EXISTS [Group] (
                     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL
                 );
-                
+
                 CREATE TABLE IF NOT EXISTS Teacher (
                     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                     name TEXT
                 );
-                
+
                 CREATE TABLE IF NOT EXISTS Room (
                     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                     name TEXT NOT NULL
@@ -62,7 +62,7 @@ module.exports = {
                     schedule_id INTEGER NOT NULL,
                     FOREIGN KEY (schedule_id) REFERENCES Schedule(id)
                 );
-                
+
                 CREATE TABLE IF NOT EXISTS Schedule (
                     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                     day INTEGER NOT NULL,

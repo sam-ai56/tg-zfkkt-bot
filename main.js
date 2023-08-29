@@ -14,12 +14,49 @@ const logger = require("./logger");
 
 const link = require("./link");
 const page = require("./page");
-page.init()
+page.init();
+
+const command = require("./command");
+command.init();
 
 const timers = require("./timers");
 timers.init();
 
+function emulate_callback_from_message(message, data) {
+    return {
+        from: message.from,
+        message: message,
+        data: data,
+    }
+}
+
+function open_link(callback) {
+    var start_timer = new Date().getTime();
+    var data = callback.data.split(":");
+    page.list.forEach((p) => {
+        if (p.link != data[1]){
+            return;
+        }
+
+        try {
+            link.from = data[0];
+            link.to = data[1];
+            link.callback_data = callback.data;
+            link.data = data.slice(2);
+
+
+            p.func(callback);
+            logger.link(callback);
+        } catch (error) {
+            console.error(error)
+        }
+        var end_timer = new Date().getTime();
+        console.log(`Time: ${(end_timer - start_timer)}ms`);
+    });
+}
+
 bot.on('callback_query', (callback) => {
+    console.log(callback)
     if (middleware.mantenance_mode() && !middleware.is_admin(callback.from.id)) {
         bot.answerCallbackQuery(callback.id, {
             text: "Бот на технічному обслуговуванні. Спробуйте пізніше.",
@@ -29,36 +66,58 @@ bot.on('callback_query', (callback) => {
     }
 
     const chat_id = callback.message.chat.id;
+    open_link(callback);
 
     if (db.prepare("SELECT * FROM User WHERE id = ?").get(callback.from.id) == undefined && callback.message.chat.type == "private") {
-        bot.sendMessage(chat_id, "Будь ласка, перезапустіть бота за допомогою команди /start. Або створіть нове меню /menu.");
+        bot.sendMessage(chat_id, "Будь ласка, перезапустіть бота або створіть нове меню /menu.");
         return;
     }
 
-    logger.link(callback, callback.data);
-    var data = callback.data.split(":");
+});
 
-    var start_timer = new Date().getTime();
-    page.list.map((p) => {
-        if (p.link != data[1]){
+
+function execute_command(msg) {
+    const args = msg.text.split(" ");
+    const etc = args.shift().toLowerCase().split("@");
+    var cmnd = etc[0].slice(1);
+
+    //!!!!!!!!!!!!!!!!!!
+    if(cmnd == "start")
+        cmnd = "menu";
+
+    var is_command_exist = false;
+    command.list.forEach(command => {
+        if (command.name != cmnd)
             return;
-        }
-        
-        try {
-            link.from = data[0];
-            link.to = data[1];
-            link.callback_data = callback.data;
-            link.data = data.slice(2);
-    
 
-            p.func(callback);
+        is_command_exist = true;
+
+        try {
+            switch(command.type){
+                case "chat" || "chat_administrators":
+                    if(command.chat_id != msg.chat.id)
+                        return;
+                    break;
+                case "chat_member":
+                    if(command.chat_id != msg.chat.id)
+                        return;
+                    if(command.user_id != msg.user_id)
+                        return;
+                    break;
+            }
+
+            command.func(msg, args);
         } catch (error) {
-            console.error(error)
+            console.log(error);
         }
     });
-    var end_timer = new Date().getTime();
-    console.log(`Time: ${(end_timer - start_timer)}ms`);
-});
+    if(!is_command_exist){
+        if(etc[1])
+            // bot.sendMessage(msg.chat.id, "шо?", { reply_to_message_id: msg.message_id });
+            bot.sendSticker(msg.chat.id, "./tsd.jpeg", { reply_to_message_id: msg.message_id })
+        return;
+    }
+}
 
 
 function success_message(chat_id, text) {
@@ -77,7 +136,7 @@ function success_message(chat_id, text) {
 }
 
 function send_message_to_group(title, text) {
-    bot.sendMessage(chat.id, `<b>${title}</b>\n<em>${text}</em>`, {parse_mode: "HTML"});
+    bot.sendMessage(env.GROUP_ID, `<b>${title}</b>\n<em>${text}</em>`, {parse_mode: "HTML"});
 }
 
 
@@ -89,7 +148,7 @@ bot.on("channel_post", (post) => {
         return;
 
     if (!post.photo && !post.video){
-        db.prepare("SELECT * FROM GroupChat WHERE news_distribution = 1").all().map((chat) => {
+        db.prepare("SELECT * FROM GroupChat WHERE news_distribution = 1").all().forEach((chat) => {
             bot.forwardMessage(chat.id, env.CHANNEL_ID, post.message_id);
         });
         return;
@@ -99,8 +158,8 @@ bot.on("channel_post", (post) => {
     if (!timer_started){
         timer_started = true;
         setTimeout(() => {
-            db.prepare("SELECT * FROM GroupChat WHERE news_distribution = 1").all().map((chat) => {    
-                bot.sendMediaGroup(chat.id, posts.map((p) => {   
+            db.prepare("SELECT * FROM GroupChat WHERE news_distribution = 1").all().forEach((chat) => {
+                bot.sendMediaGroup(chat.id, posts.forEach((p) => {
                     return {
                         type: p.photo? "photo" : "video",
                         media: p.photo? p.photo[0].file_id : p.video.file_id,
@@ -117,11 +176,46 @@ bot.on("channel_post", (post) => {
 
 bot.on('message', (msg) => {
     const date = new Date();
+
+    console.log(msg.chat.id);
+
+    if (msg.text.startsWith("/"))
+        execute_command(msg);
+
+    if (msg.chat.type == "private" && middleware.is_owner(msg.from.id) && msg.text.startsWith(">")) {
+        let args = msg.text.split(" ");
+        let command = args.shift().toLowerCase().substring(1);
+
+        switch(command) {
+            case "t1":
+                bot.sendMessage(msg.chat.id, "Поцілуй мій блискучий металевий зад!").then((msg) => {
+                    open_link(emulate_callback_from_message(msg, link.gen_link(undefined, `show_group_schedule:2:${date.getDay()}:0`)));
+                });
+                break;
+            case "t2":
+                // db.prepare("SELECT * FROM GroupChat WHERE schedule_distribution = 1").all().forEach((chat) => {
+                //     console.log(chat.id);
+                //     bot.sendPhoto(chat.id, "pary.jpg");
+                // });
+
+                // db.prepare("SELECT * FROM User WHERE distribution = 1").all().forEach((user) => {
+                //     console.log(user.id);
+                // });
+                break;
+            default:
+                bot.sendMessage(msg.chat.id, "шо?", {reply_to_message_id: msg.message_id});
+                break;
+        }
+    }
+
+    console.log("")
+
     const chat_id = msg.chat.id;
     var username = msg.from.username? `@${msg.from.username}` : msg.from.first_name? msg.from.first_name : msg.from.last_name;
 
     if (!msg.text && msg.chat.type == "private") {
-        bot.sendSticker(chat_id, "CAACAgIAAxkBAAIPe2QOzghI9AGHX8qmR8RjOKeINamiAAI_KQACsJmoSwpWpVE_WNZyLwQ");
+        console.log(msg.sticker.file_unique_id);
+        bot.sendSticker(chat_id, "CAACAgIAAxkBAAJSimTdpCFJGv-SPvrk9J9bTr7X6_MPAALGIwACU_kZSX1Vt2WaGsO2MAQ");
         return;
     }
 
@@ -175,7 +269,7 @@ bot.on('message', (msg) => {
                 });
                 return;
             }
-            
+
             var group = db.prepare("SELECT * FROM GroupChat WHERE id = ?").get(msg.chat.id);
             if (group == undefined) {
                 return;
@@ -256,13 +350,30 @@ bot.on('message', (msg) => {
         return;
     }
 
+    if (command == "/test_schedule" && msg.from.id == env.OWNER_ID) {
+        if (msg.chat.type != "supergroup" && msg.chat.type != "group")
+            return;
+
+        const group = db.prepare("SELECT * FROM GroupChat WHERE id = ?").get(msg.chat.id);
+        if (group == undefined) {
+            bot.sendMessage(chat_id, "Група не підписана на розсилку розкладу.", {
+                reply_to_message_id: msg.message_id
+            });
+            return;
+        }
+        bot.sendMessage(msg.chat.id, "Поцілуй мій блискучий металевий зад!").then((msg) => {
+            open_link(emulate_callback_from_message(msg, link.gen_link(undefined, `show_group_schedule:${group.group}:${date.getDay()}:0`)));
+        });
+    }
+
+
     if (msg.chat.id == env.GROUP_ID) {
         const args = msg.text.split(" ");
         const command = args.shift().toLowerCase().split("@")[0];
         switch (command) {
             case '/add_teacher':
                 var arg = "";
-                args.map((a, i) => {
+                args.forEach((a, i) => {
                     if (i != 0)
                         arg += " ";
                     arg += `${a}`;
@@ -272,7 +383,7 @@ bot.on('message', (msg) => {
                     bot.sendMessage(chat_id, "Викладача не вказано.", {reply_to_message_id: msg.message_id});
                     return;
                 }
-                
+
                 if (db.prepare("SELECT * FROM Teacher WHERE name = ?").get(arg) == undefined){
                     db.prepare("INSERT INTO Teacher (name) VALUES (?)").run(arg);
                     bot.sendMessage(chat_id, `Викладача ${arg} додано.`);
@@ -285,7 +396,7 @@ bot.on('message', (msg) => {
                 var teachers = db.prepare("SELECT * FROM Teacher ORDER BY name COLLATE NOCASE").all();
                 teachers.shift();
                 var teacher_text = "Викладачі:\n";
-                teachers.map((teacher, index) => {
+                teachers.forEach((teacher, index) => {
                     teacher_text += `${index+1}: ${teacher.name}\n`;
                 });
                 bot.sendMessage(chat_id, teacher_text);
@@ -293,7 +404,7 @@ bot.on('message', (msg) => {
 
             case '/remove_teacher':
                 var arg = "";
-                args.map((a, i) => {
+                args.forEach((a, i) => {
                     if (i != 0)
                         arg += " ";
                     arg += `${a}`;
@@ -322,60 +433,11 @@ bot.on('message', (msg) => {
         return;
     }
 
-    if (command == "/admin_invite") {
-        if (args[0] == undefined) {
-            bot.sendMessage(chat_id, "Введи код");
-            return;
-        }
-
-        if(db.prepare("SELECT * FROM User WHERE id = ?").get(chat_id).is_admin == 1) {
-            bot.sendMessage(chat_id, "Ти вже адмін.");
-            return;
-        }
-
-        if (db.prepare("SELECT * FROM InviteCode WHERE code = ? AND type = ?").get(args[0], "admin") == undefined) {
-            bot.sendMessage(chat_id, ":(");
-            return;
-        }
-
-        if (db.prepare("SELECT * FROM InviteCode WHERE user_id = ? AND type = ?").get(msg.from.id, "admin")) {
-            bot.sendMessage(chat_id, "Зачекай.");
-            return;
-        }
-
-        if (db.prepare("SELECT * FROM InviteCode WHERE code = ? AND type = ?").get(args[0], "admin").user_id != null) {
-            bot.sendMessage(chat_id, "Код вже використано.");
-            return;
-        }
-
-        db.prepare('UPDATE InviteCode SET user_id = ? WHERE code = ?')
-            .run(chat_id, args[0]);
-        db.prepare('UPDATE User SET last_name = ?, first_name = ?, username = ? WHERE id = ?').run(msg.from.last_name, msg.from.first_name, msg.from.username, chat_id);
-
-        bot.getChat(env.OWNER_ID).then((chat) => {
-            bot.sendMessage(chat_id, `Добре, тепер зачекай поки @${chat.username} підтвердить запрошення.`);
-        });
-
-        bot.sendMessage(env.OWNER_ID, `Користувач ${msg.from.first_name} ${msg.from.last_name? msg.from.last_name : ""} (@${msg.from.username}) використав код.`);
+    if (msg.chat.type != "private")
         return;
-    }
-
-
-    if (msg.chat.type != "private") 
-        return;
-    
-    if (msg.text == "/start" || msg.text == "/menu") {
-        db.prepare("INSERT OR IGNORE INTO User (id) VALUES (?)").run(chat_id);
-        bot.sendMessage(chat_id, "Що тобі потрібно сталкер?", {
-            reply_markup: {
-                inline_keyboard: menu.main_menu(chat_id)
-            }
-        });
-        return;
-    }
 
     if (db.prepare("SELECT * FROM User WHERE id = ?").get(msg.from.id) == undefined) {
-        bot.sendMessage(chat_id, "Будь ласка, перезапустіть бота за допомогою команди /start. Або створіть нове меню /menu.");
+        bot.sendMessage(chat_id, "Будь ласка, перезапустіть бота за допомогою команди /start");
         return;
     }
 

@@ -19,14 +19,14 @@ module.exports = {
         if (object)
             return {
                 text: 'Назад',
-                callback_data: gen_link(_to),
+                callback_data: this.gen_link(_to),
             };
     
         return [
             [
                 {
                     text: 'Назад',
-                    callback_data: gen_link(_to),
+                    callback_data: this.gen_link(_to),
                 }
             ]
         ];

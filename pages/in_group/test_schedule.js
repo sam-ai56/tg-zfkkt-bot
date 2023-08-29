@@ -1,9 +1,9 @@
-const page = require("../page");
-const bot = require("../telegram").bot;
-const menu = require("../menu");
+const page = require("../../page");
+const bot = require("../../telegram").bot;
+const menu = require("../../menu");
 
 module.exports = {
-    name: "menu",
+    name: "test_schedule",
     func (callback) {
         bot.editMessageText("Що тобі потрібно сталкер?", {
             chat_id: callback.message.chat.id,

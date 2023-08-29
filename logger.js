@@ -14,22 +14,30 @@ function log(msg, type, text){
 
     if (text == undefined)
         text = msg.text;
-        
+
     var time_now = new Date().toLocaleTimeString('en-US', { hour12: false, hour: "numeric", minute: "numeric" });
 
     console.log();
-    console.log(`╭─[${username.cyan}, ${String(msg.from.id).cyan}] (${time_now.grey})`);
+    console.log(`╭─[${username.cyan}, ${String(msg.from.id).cyan}, C${String(msg.chat.id).cyan}] (${time_now.grey})`);
     console.log(`╰─ ${type.blue} -> ${'"'.yellow + text.yellow + '"'.yellow}`);
 }
 
-function error(msg, text){
-    const username = msg.from.username ? msg.from.username : msg.from.first_name;
-
+function error(text){
     var time_now = new Date().toLocaleTimeString('en-US', { hour12: false, hour: "numeric", minute: "numeric" });
 
     console.log();
-    console.log(`╭─[${username.cyan}, ${String(msg.from.id).cyan}] (${time_now.grey})`);
+    console.log(`╭─(${time_now.grey})`);
     console.log(`╰─ ${"error".blue} -> ${'"'.red + text.red + '"'.red}`);
+}
+
+function link(callback){
+    const date = new Date();
+    const links = callback.data.split(':');
+    const username = callback.from.username ? callback.from.username : callback.from.first_name;
+
+    console.log();
+    console.log(`╭─[${username.cyan}, ${String(callback.from.id).cyan}] (${String(date.getHours()).padStart(2, '0').grey + ":".grey + String(date.getMinutes()).padStart(2, '0').grey})`);
+    console.log(`╰─ ${"link".blue}(${links[0].red} -> ${links[1].yellow})`);
 }
 
 bot.on('message', (msg) => {
@@ -40,7 +48,7 @@ bot.on('message', (msg) => {
         return;
 
     if (msg.animation){
-        log(msg, "gif", msg.animation.file_id)
+        log(msg, "gif", JSON.stringify(msg.animation));
         return;
     }
 
@@ -62,16 +70,6 @@ bot.on('message', (msg) => {
 
 module.exports = {
     log,
-    link(callback){
-        if (!middleware.debug_mode())
-            return;
-
-        const date = new Date();
-        const links = callback.data.split(':');
-        const username = callback.from.username ? callback.from.username : callback.from.first_name;
-
-        console.log();
-        console.log(`╭─[${username.cyan}, ${String(callback.from.id).cyan}] (${String(date.getHours()).padStart(2, '0').grey + ":".grey + String(date.getMinutes()).padStart(2, '0').grey})`);
-        console.log(`╰─ ${"link".blue}(${links[0].red} -> ${links[1].yellow})`);
-    }
+    error,
+    link
 }

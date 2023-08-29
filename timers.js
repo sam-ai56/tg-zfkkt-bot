@@ -4,31 +4,35 @@ const bot = require("./telegram").bot;
 module.exports = {
     init() {
         setInterval(() => {
+            return;
             const date = new Date();
             var day = date.getDay();
             var time = String(date.getHours()).padStart(2, '0') + ":" + String(date.getMinutes()).padStart(2, '0');
             var schedules = db.prepare(`
-                SELECT Schedule.id, Schedule.day, Schedule.group_id, Schedule.time_id, Time.start_at as time_start_at, Time.end_at as time_end_at, Subject.name AS subject_name, [Group].name AS group_name, Teacher.name AS teacher_name, Room.name AS room_name
-                FROM Schedule 
-                INNER JOIN Subject ON Schedule.subject_id = Subject.id 
-                INNER JOIN [Group] ON Schedule.group_id = [Group].id 
-                INNER JOIN Teacher ON Schedule.teacher_id = Teacher.id 
-                INNER JOIN Room ON Schedule.room_id = Room.id 
+                SELECT Schedule.id, Schedule.day, Schedule.group_id, Schedule.time_id, Time.start_at as time_start_at, Time.end_at as time_end_at, Subject.name AS subject_name, Subject.id AS subject_id, [Group].name AS group_name, Teacher.name AS teacher_name, Room.name AS room_name
+                FROM Schedule
+                INNER JOIN Subject ON Schedule.subject_id = Subject.id
+                INNER JOIN [Group] ON Schedule.group_id = [Group].id
+                INNER JOIN Teacher ON Schedule.teacher_id = Teacher.id
+                INNER JOIN Room ON Schedule.room_id = Room.id
                 INNER JOIN Time ON Schedule.time_id = Time.id
                 WHERE time_start_at <= ? AND time_end_at >= ? AND Schedule.day = ?;
             `).all(time, time, day);
 
-            schedules.map((schedule, shedule_index) => {
+            schedules.forEach((schedule, shedule_index) => {
+                if (schedule.subject_id == 117) {
+                    return;
+                }
                 var distribution = db.prepare("SELECT * FROM Distribution WHERE schedule_id = ?").get(schedule.id);
                 var alt_shedule = false;
                 var alt_shedule_group = false;
                 var google_classroom = false;
-                if (distribution) 
+                if (distribution)
                     return;
-                
+
                 db.prepare("INSERT INTO Distribution (schedule_id) VALUES (?)").run(schedule.id);
                 var users = db.prepare("SELECT * FROM User WHERE [group] = ? AND distribution = 1").all(schedule.group_id);
-                users.map((user) => {
+                users.forEach((user) => {
                     var args = {
                         parse_mode: "HTML",
                     }
@@ -48,7 +52,7 @@ module.exports = {
                     if (schedule.room_name == "Google Classroom") {
                         google_classroom = true;
                     }
-                    
+
                     if (schedules[shedule_index+1] != undefined && schedules[shedule_index+1].time_start_at == schedule.time_start_at && schedules[shedule_index+1].group_id == schedule.group_id) {
                         var next_schedule = schedules[shedule_index+1];
                         schedule_text += `╭───\n`
@@ -80,7 +84,7 @@ module.exports = {
                 });
 
                 var groups = db.prepare("SELECT * FROM GroupChat WHERE [group] = ? AND schedule_distribution = 1").all(schedule.group_id);
-                groups.map((group) => {
+                groups.forEach((group) => {
                     var args = {
                         parse_mode: "HTML",
                     }
@@ -91,7 +95,7 @@ module.exports = {
                     schedule_text += `│ •  <b>Вчитель</b>: ${schedule.teacher_name != null? schedule.teacher_name: "НІЧОГО"}\n`
                     schedule_text += `│ •  <b>Де</b>: ${schedule.room_name}\n`;
                     schedule_text += `╰───────\n`;
-                    
+
                     if (schedules[shedule_index+1] != undefined && schedules[shedule_index+1].time_start_at == schedule.time_start_at && schedules[shedule_index+1].group_id == schedule.group_id) {
                         var next_schedule = schedules[shedule_index+1];
                         schedule_text += `╭───\n`

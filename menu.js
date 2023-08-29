@@ -5,22 +5,17 @@ const middleware = require("./middleware");
 module.exports = {
     main_menu(id){
         var def = [
-            // [
-            //     // {
-            //     //     text: 'Розклад',
-            //     //     callback_data: 'menu:schedule_menu',
-            //     // },
             [
                 {
-                    text: 'Поскаржитися',
+                    text: '⚖️ Поскаржитися',
                     callback_data: 'menu:complaint_menu'
                 },
                 {
-                    text: 'Пропозиція',
+                    text: '🤓 Пропозиція',
                     callback_data: 'menu:offer_text',
                 },
                 {
-                    text: 'СС',
+                    text: '⚡️ СС',
                     callback_data: 'menu:ss_menu'
                 },
             ]
@@ -37,7 +32,7 @@ module.exports = {
 
         def.push([
             {
-                text: 'Розклад',
+                text: '🗿 Розклад',
                 callback_data: 'menu:schedule_menu',
             },
         ]);
@@ -51,33 +46,33 @@ module.exports = {
 
         if (middleware.has_group(id)){
             def[0].push({
-                text: 'Подивитись свій розклад',
+                text: '😮 Подивитись свій розклад',
                 callback_data: link.gen_link(link.to, `show_schedule:${day}`)
             });
             def[0].push({
-                text: 'Розклад іншої групи',
+                text: '🤔 Розклад іншої групи',
                 callback_data: link.gen_link(link.to, `get_group_schedule:0`)
             });
         }else{
             def[0].push({
-                text: 'Подивитись розклад',
+                text: '😮 Подивитись розклад',
                 callback_data: link.gen_link(link.to, `get_group_schedule:0`)
             });
         }
         
         def[1].push({
-            text: 'Розклад дзвінків',
+            text: '🔔 Розклад дзвінків',
             callback_data: link.gen_link(link.to, 'show_bells_schedule')
         });
 
         if (middleware.has_distribution(id)){
             def[1].push({
-                text: "Підписатися на розсилку",
+                text: "🥹 Підписатися на розсилку",
                 callback_data: link.gen_link(link.to, "get_group_distribution:0")
             });
         }else{
             def[1].push({
-                text: "Відписатися від розсилки",
+                text: "🙄 Відписатися від розсилки",
                 callback_data: link.gen_link(link.to, "unsubscribe_distribution")
             });
             // def[1].push({
@@ -97,15 +92,17 @@ module.exports = {
         return [
             [
                 {
-                    text: 'Скарга на викладача',
+                    text: '😟 Скарга на викладача',
                     callback_data: link.gen_link(link.to, `complaint_teacher_menu:0`)
                 },
                 {
-                    text: 'Скарга на СС',
+                    text: '🫣 Скарга на СС',
                     callback_data: link.gen_link(link.to, 'complaint_ss_text')
-                },
+                }
+            ],
+            [
                 {
-                    text: 'Скарга на бота',
+                    text: '😐 Скарга на бота',
                     callback_data: link.gen_link(link.to, 'complaint_bot_text')
                 }
             ],
@@ -121,12 +118,18 @@ module.exports = {
         return [
             [
                 {
-                    text: 'Запит на вступ до СС',
-                    url: "https://bit.ly/43jV51B"
+                    text: '🤗 Запит на вступ до СС',
+                    url: "https://docs.google.com/forms/d/e/1FAIpQLSftBbokja9-wV1Ol3VUSWiSzTepGbkNm00TMg2MVJ5YlQNstA/viewform"
                 },
                 {
-                    text: 'Що таке СС?',
+                    text: '🤔 Що таке СС?',
                     callback_data: link.gen_link(link.to, 'ss_about')
+                }
+            ],
+            [
+                {
+                    text: "💭 Наші соц. мережі",
+                    callback_data: link.gen_link(link.to, 'ss_media')
                 }
             ],
             [
