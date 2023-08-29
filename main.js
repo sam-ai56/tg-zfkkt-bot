@@ -92,20 +92,28 @@ function execute_command(msg) {
 
         is_command_exist = true;
 
-        try {
-            switch(command.type){
-                case "chat" || "chat_administrators":
-                    if(command.chat_id != msg.chat.id)
-                        return;
-                    break;
-                case "chat_member":
-                    if(command.chat_id != msg.chat.id)
-                        return;
-                    if(command.user_id != msg.user_id)
-                        return;
-                    break;
-            }
+        switch(command.type){
+            case "all_group_chats":
+                if(msg.chat.type != "supergroup" && msg.chat.type != "group")
+                    return;
+                break;
+            case "all_private_chats":
+                if(msg.chat.type != "private")
+                    return;
+                break;
+            case "chat" || "chat_administrators":
+                if(command.chat_id != msg.chat.id)
+                    return;
+                break;
+            case "chat_member":
+                if(command.chat_id != msg.chat.id)
+                    return;
+                if(command.user_id != msg.user_id)
+                    return;
+                break;
+        }
 
+        try {
             command.func(msg, args);
         } catch (error) {
             console.log(error);
@@ -182,34 +190,6 @@ bot.on('message', (msg) => {
     if (msg.text.startsWith("/"))
         execute_command(msg);
 
-    if (msg.chat.type == "private" && middleware.is_owner(msg.from.id) && msg.text.startsWith(">")) {
-        let args = msg.text.split(" ");
-        let command = args.shift().toLowerCase().substring(1);
-
-        switch(command) {
-            case "t1":
-                bot.sendMessage(msg.chat.id, "Поцілуй мій блискучий металевий зад!").then((msg) => {
-                    open_link(emulate_callback_from_message(msg, link.gen_link(undefined, `show_group_schedule:2:${date.getDay()}:0`)));
-                });
-                break;
-            case "t2":
-                // db.prepare("SELECT * FROM GroupChat WHERE schedule_distribution = 1").all().forEach((chat) => {
-                //     console.log(chat.id);
-                //     bot.sendPhoto(chat.id, "pary.jpg");
-                // });
-
-                // db.prepare("SELECT * FROM User WHERE distribution = 1").all().forEach((user) => {
-                //     console.log(user.id);
-                // });
-                break;
-            default:
-                bot.sendMessage(msg.chat.id, "шо?", {reply_to_message_id: msg.message_id});
-                break;
-        }
-    }
-
-    console.log("")
-
     const chat_id = msg.chat.id;
     var username = msg.from.username? `@${msg.from.username}` : msg.from.first_name? msg.from.first_name : msg.from.last_name;
 
@@ -219,225 +199,11 @@ bot.on('message', (msg) => {
         return;
     }
 
-    const args = msg.text.split(" ");
-    const command = args.shift().toLowerCase().split("@")[0];
-
-    if (command == "/subscribe_schedule" && msg.chat.id != env.GROUP_ID) {
-        if (msg.chat.type != "supergroup" && msg.chat.type != "group")
-            return;
-
-        const is_subscribed = db.prepare("SELECT * FROM GroupChat WHERE id = ? AND schedule_distribution = 1").get(msg.chat.id);
-        if (is_subscribed != undefined) {
-            bot.sendMessage(chat_id, "Ви вже підписали групу на розсилку.", {
-                reply_to_message_id: msg.message_id
-            });
-            return;
-        }
-
-        bot.getChatMember(msg.chat.id, msg.from.id).then((member) => {
-            if (member.status != "administrator" && member.status != "creator" && msg.from.id != env.OWNER_ID) {
-                bot.sendMessage(chat_id, "Ти не адміністратор групи.", {
-                    reply_to_message_id: msg.message_id
-                });
-                return;
-            }
-
-            db.prepare("INSERT OR IGNORE INTO GroupChat (id) VALUES (?)").run(msg.chat.id);
-            bot.sendMessage(chat_id, "Привіт для того, щоб активувати розсилку для цього чату адміністратор повинен вибрати групу з меню після чого вона буде підписана на розсилку.", {
-                reply_markup: {
-                    inline_keyboard: [
-                        [
-                            {
-                                text: 'Підписатися на розсилку',
-                                callback_data: link.gen_link('group_menu', `get_group_distribution_gc:0`)
-                            }
-                        ]
-                    ]
-                }
-            });
-        });
-        return;
-    }
-
-    if (command == "/unsubscribe_schedule" && msg.chat.id != env.GROUP_ID) {
-        if (msg.chat.type != "supergroup" && msg.chat.type != "group")
-            return;
-        bot.getChatMember(msg.chat.id, msg.from.id).then((member) => {
-            if (member.status != "administrator" && member.status != "creator" && msg.from.id != env.OWNER_ID) {
-                bot.sendMessage(chat_id, "Ти не адміністратор групи.", {
-                    reply_to_message_id: msg.message_id
-                });
-                return;
-            }
-
-            var group = db.prepare("SELECT * FROM GroupChat WHERE id = ?").get(msg.chat.id);
-            if (group == undefined) {
-                return;
-            }
-
-            const is_subscribed = db.prepare("SELECT * FROM GroupChat WHERE id = ? AND schedule_distribution = 0").get(msg.chat.id);
-            if (is_subscribed != undefined) {
-                bot.sendMessage(chat_id, "Ви вже відписали групу від розсилки.", {
-                    reply_to_message_id: msg.message_id
-                });
-                return;
-            }
-
-            db.prepare("INSERT OR IGNORE INTO GroupChat (id) VALUES (?)").run(msg.chat.id);
-            db.prepare("UPDATE GroupChat SET [group] = NULL, schedule_distribution = 0 WHERE id = ?").run(msg.chat.id);
-            bot.sendMessage(chat_id, `${username} відписав групу від розсилки.`, {
-                reply_to_message_id: msg.message_id
-            });
-        });
-        return;
-    }
-
-    if (command == "/subscribe_news" && msg.chat.id != env.GROUP_ID) {
-        if (msg.chat.type != "supergroup" && msg.chat.type != "group")
-            return;
-
-        const is_subscribed = db.prepare("SELECT * FROM GroupChat WHERE id = ? AND news_distribution = 1").get(msg.chat.id);
-        if (is_subscribed != undefined) {
-            bot.sendMessage(chat_id, "Ви вже підписали групу на розсилку новин.", {
-                reply_to_message_id: msg.message_id
-            });
-            return;
-        }
-
-        bot.getChatMember(msg.chat.id, msg.from.id).then((member) => {
-            if (member.status != "administrator" && member.status != "creator" && msg.from.id != env.OWNER_ID) {
-                bot.sendMessage(chat_id, "Ти не адміністратор групи.", {
-                    reply_to_message_id: msg.message_id
-                });
-                return;
-            }
-
-            db.prepare("INSERT OR IGNORE INTO GroupChat (id) VALUES (?)").run(msg.chat.id);
-            db.prepare("UPDATE GroupChat SET news_distribution = 1 WHERE id = ?").run(msg.chat.id);
-            bot.sendMessage(chat_id, "Група підписана на розсилку новин.", {
-                reply_to_message_id: msg.message_id
-            });
-        });
-        return;
-    }
-
-    if (command == "/unsubscribe_news" && msg.chat.id != env.GROUP_ID) {
-        if (msg.chat.type != "supergroup" && msg.chat.type != "group")
-            return;
-
-        const is_subscribed = db.prepare("SELECT * FROM GroupChat WHERE id = ? AND news_distribution = 0").get(msg.chat.id);
-        if (is_subscribed != undefined) {
-            bot.sendMessage(chat_id, "Ви вже відписали групу від розсилки новин.", {
-                reply_to_message_id: msg.message_id
-            });
-            return;
-        }
-
-        bot.getChatMember(msg.chat.id, msg.from.id).then((member) => {
-            if (member.status != "administrator" && member.status != "creator" && msg.from.id != env.OWNER_ID) {
-                bot.sendMessage(chat_id, "Ти не адміністратор групи.", {
-                    reply_to_message_id: msg.message_id
-                });
-                return;
-            }
-
-            db.prepare("INSERT OR IGNORE INTO GroupChat (id) VALUES (?)").run(msg.chat.id);
-            db.prepare("UPDATE GroupChat SET news_distribution = 0 WHERE id = ?").run(msg.chat.id);
-            bot.sendMessage(chat_id, "Група відписана від розсилки новин.", {
-                reply_to_message_id: msg.message_id
-            });
-        });
-        return;
-    }
-
-    if (command == "/test_schedule" && msg.from.id == env.OWNER_ID) {
-        if (msg.chat.type != "supergroup" && msg.chat.type != "group")
-            return;
-
-        const group = db.prepare("SELECT * FROM GroupChat WHERE id = ?").get(msg.chat.id);
-        if (group == undefined) {
-            bot.sendMessage(chat_id, "Група не підписана на розсилку розкладу.", {
-                reply_to_message_id: msg.message_id
-            });
-            return;
-        }
-        bot.sendMessage(msg.chat.id, "Поцілуй мій блискучий металевий зад!").then((msg) => {
-            open_link(emulate_callback_from_message(msg, link.gen_link(undefined, `show_group_schedule:${group.group}:${date.getDay()}:0`)));
-        });
-    }
-
-
-    if (msg.chat.id == env.GROUP_ID) {
-        const args = msg.text.split(" ");
-        const command = args.shift().toLowerCase().split("@")[0];
-        switch (command) {
-            case '/add_teacher':
-                var arg = "";
-                args.forEach((a, i) => {
-                    if (i != 0)
-                        arg += " ";
-                    arg += `${a}`;
-                });
-
-                if (arg == "") {
-                    bot.sendMessage(chat_id, "Викладача не вказано.", {reply_to_message_id: msg.message_id});
-                    return;
-                }
-
-                if (db.prepare("SELECT * FROM Teacher WHERE name = ?").get(arg) == undefined){
-                    db.prepare("INSERT INTO Teacher (name) VALUES (?)").run(arg);
-                    bot.sendMessage(chat_id, `Викладача ${arg} додано.`);
-                    return;
-                }
-                bot.sendMessage(chat_id, `Викладач ${arg} вже є.`, {reply_to_message_id: msg.message_id});
-                break
-
-            case '/list_teachers':
-                var teachers = db.prepare("SELECT * FROM Teacher ORDER BY name COLLATE NOCASE").all();
-                teachers.shift();
-                var teacher_text = "Викладачі:\n";
-                teachers.forEach((teacher, index) => {
-                    teacher_text += `${index+1}: ${teacher.name}\n`;
-                });
-                bot.sendMessage(chat_id, teacher_text);
-                break
-
-            case '/remove_teacher':
-                var arg = "";
-                args.forEach((a, i) => {
-                    if (i != 0)
-                        arg += " ";
-                    arg += `${a}`;
-                });
-
-                if (arg == "") {
-                    bot.sendMessage(chat_id, "Викладача не вказано.", {reply_to_message_id: msg.message_id});
-                    return;
-                }
-
-                if (db.prepare("SELECT * FROM Teacher WHERE name = ?").get(arg) == undefined){
-                    bot.sendMessage(chat_id, `Викладача ${arg} не існує.`, {reply_to_message_id: msg.message_id});
-                    return;
-                }
-                db.prepare("DELETE FROM Teacher WHERE name = ?").run(arg);
-                bot.sendMessage(chat_id, `${arg} видалено.`);
-                break
-
-            case '/help':
-                bot.sendMessage(chat_id, "Список команд:\n/add_teacher - додати викладача\n/list_teachers - список викладачів\n/remove_teacher - видалити викладача\n/help - список команд");
-                break
-
-            default:
-                break;
-        }
-        return;
-    }
-
     if (msg.chat.type != "private")
         return;
 
     if (db.prepare("SELECT * FROM User WHERE id = ?").get(msg.from.id) == undefined) {
-        bot.sendMessage(chat_id, "Будь ласка, перезапустіть бота за допомогою команди /start");
+        bot.sendMessage(chat_id, "Будь ласка, перезапустіть бота або створіть нове меню /menu.");
         return;
     }
 
