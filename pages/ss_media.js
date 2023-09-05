@@ -10,6 +10,12 @@ module.exports = {
             message_id: callback.message.message_id,
             reply_markup: {
                 inline_keyboard: [
+                    // [
+                    //     {
+                    //         text: "🫠 ТікТок",
+                    //         url: "https://bit.ly/3s3mWlt"
+                    //     }
+                    // ],
                     [
                         {
                             text: "🩴 Telegram",
@@ -18,16 +24,10 @@ module.exports = {
                         {
                             text: "👾 Discord",
                             url: "https://discord.gg/2dWXTpwqQt"
-                        }
-                    ],
-                    [
-                        {
-                            text: "📸 Instagram",
-                            url: "https://bit.ly/3s3mWlt"
                         },
                         {
-                            text: "🫠 ТікТок",
-                            url: "https://bit.ly/3s3mWlt"
+                            text: "📸 Instagram",
+                            url: "https://www.instagram.com/zfkkt"
                         }
                     ],
                     [

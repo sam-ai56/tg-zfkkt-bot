@@ -9,10 +9,12 @@
   "author": "Sam Miller",
   "license": "MIT",
   "dependencies": {
+    "@inquirer/prompts": "^3.0.4",
     "better-sqlite3": "^8.1.0",
     "colors": "^1.4.0",
     "dotenv": "^16.0.3",
-    "glob": "^10.3.3",
+    "glob": "^10.3.4",
+    "inquirer": "^9.2.10",
     "node-telegram-bot-api": "^0.61.0"
   }
 }

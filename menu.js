@@ -119,7 +119,7 @@ module.exports = {
             [
                 {
                     text: '🤗 Запит на вступ до СС',
-                    url: "https://docs.google.com/forms/d/e/1FAIpQLSftBbokja9-wV1Ol3VUSWiSzTepGbkNm00TMg2MVJ5YlQNstA/viewform"
+                    url: "https://forms.gle/zPwxXBsRsrhENeYP8"
                 },
                 {
                     text: '🤔 Що таке СС?',
@@ -130,6 +130,10 @@ module.exports = {
                 {
                     text: "💭 Наші соц. мережі",
                     callback_data: link.gen_link(link.to, 'ss_media')
+                },
+                {
+                    text: "🐗 PUMBA!",
+                    callback_data: link.gen_link(link.to, 'pumba_info')
                 }
             ],
             [

@@ -1,0 +1,4 @@
+#! /bin/bash
+
+cd rodriges;
+node bender.js $@;

@@ -3,7 +3,7 @@ const env = process.env;
 
 const middleware = require("./middleware");
 
-const menu = require("./menu");
+//const menu = require("./menu");
 
 const database = require("./database");
 const db = database.sqlite;
@@ -38,13 +38,17 @@ function open_link(callback) {
             return;
         }
 
+        var tc = data[0].split("_");
+        if (tc[tc.length - 1 ] == "text")
+            db.prepare("UPDATE User SET type = ? WHERE id = ?").run(null, callback.from.id);
+
+        link.from = data[0];
+        link.to = data[1];
+        link.callback_data = callback.data;
+        link.data = data.slice(2);
+
+
         try {
-            link.from = data[0];
-            link.to = data[1];
-            link.callback_data = callback.data;
-            link.data = data.slice(2);
-
-
             p.func(callback);
             logger.link(callback);
         } catch (error) {
@@ -121,6 +125,8 @@ function execute_command(msg) {
     });
     if(!is_command_exist){
         if(etc[1])
+            if(etc[1] != "zfkkt_bot")
+                return;
             // bot.sendMessage(msg.chat.id, "шо?", { reply_to_message_id: msg.message_id });
             bot.sendSticker(msg.chat.id, "./tsd.jpeg", { reply_to_message_id: msg.message_id })
         return;
@@ -152,6 +158,7 @@ var posts = [];
 var timer_started = false;
 // O_o ...
 bot.on("channel_post", (post) => {
+    return;
     if (post.chat.id != env.CHANNEL_ID)
         return;
 
@@ -162,40 +169,34 @@ bot.on("channel_post", (post) => {
         return;
     }
 
-    posts.push(post);
-    if (!timer_started){
-        timer_started = true;
-        setTimeout(() => {
-            db.prepare("SELECT * FROM GroupChat WHERE news_distribution = 1").all().forEach((chat) => {
-                bot.sendMediaGroup(chat.id, posts.forEach((p) => {
-                    return {
-                        type: p.photo? "photo" : "video",
-                        media: p.photo? p.photo[0].file_id : p.video.file_id,
-                        caption: p.caption? p.caption + `\n\n@zfkkt`: undefined,
-                        caption_entities: p.caption_entities,
-                    }
-                }));
-            });
-            posts = [];
-            timer_started = false;
-        }, 100);
-    }
+    // posts.push(post);
+    // if (!timer_started){
+    //     timer_started = true;
+    //     setTimeout(() => {
+    //         db.prepare("SELECT * FROM GroupChat WHERE news_distribution = 1").all().forEach((chat) => {
+    //             console.log(posts);
+    //             if (posts.length == 1)
+    //                 return bot.forwardMessage(chat.id, env.CHANNEL_ID, posts[0].message_id);
+    //             bot.sendMediaGroup(chat.id, posts.forEach((p) => {
+    //                 return {
+    //                     type: p.photo? "photo" : "video",
+    //                     media: p.photo? p.photo[0].file_id : p.video.file_id,
+    //                     caption: p.caption? p.caption + `\n\n@zfkkt`: undefined,
+    //                     caption_entities: p.caption_entities,
+    //                 }
+    //             }));
+    //         });
+    //         posts = [];
+    //         timer_started = false;
+    //     }, 100);
+    // }
 });
 
 bot.on('message', (msg) => {
     const date = new Date();
 
-    console.log(msg.chat.id);
-
-    if (msg.text.startsWith("/"))
+    if (msg.text.startsWith("/")){
         execute_command(msg);
-
-    const chat_id = msg.chat.id;
-    var username = msg.from.username? `@${msg.from.username}` : msg.from.first_name? msg.from.first_name : msg.from.last_name;
-
-    if (!msg.text && msg.chat.type == "private") {
-        console.log(msg.sticker.file_unique_id);
-        bot.sendSticker(chat_id, "CAACAgIAAxkBAAJSimTdpCFJGv-SPvrk9J9bTr7X6_MPAALGIwACU_kZSX1Vt2WaGsO2MAQ");
         return;
     }
 
@@ -206,6 +207,14 @@ bot.on('message', (msg) => {
         bot.sendMessage(chat_id, "Будь ласка, перезапустіть бота або створіть нове меню /menu.");
         return;
     }
+
+    const chat_id = msg.chat.id;
+
+    // if (!msg.text && msg.chat.type == "private") {
+    //     console.log(msg.sticker.file_unique_id);
+    //     bot.sendSticker(chat_id, "CAACAgIAAxkBAAJSimTdpCFJGv-SPvrk9J9bTr7X6_MPAALGIwACU_kZSX1Vt2WaGsO2MAQ");
+    //     return;
+    // }
 
     var data = db.prepare("SELECT type FROM User WHERE id = ?").get(chat_id).type;
     data = data.split(":");

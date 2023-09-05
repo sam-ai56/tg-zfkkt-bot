@@ -12,6 +12,7 @@ module.exports = {
     func (msg, args) {
         if(msg.chat.id == env.GROUP_ID)
             return;
+
         const is_subscribed = db.prepare("SELECT * FROM GroupChat WHERE id = ? AND schedule_distribution = 1").get(msg.chat.id);
         if (is_subscribed != undefined) {
             bot.sendMessage(msg.chat.id, "Ви вже підписали групу на розсилку.", {
