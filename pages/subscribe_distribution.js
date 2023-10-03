@@ -9,7 +9,7 @@ module.exports = {
         var group_id = link.data[0];
         db.prepare('UPDATE User SET [group] = ?, distribution = 1 WHERE id = ?').run(group_id, callback.from.id);
         var group_name = db.prepare('SELECT name FROM [Group] WHERE id = ?').get(group_id).name;
-        bot.editMessageText(`Ти підписався на розсилку (${group_name})`, {
+        bot.editMessageText(`Ви підписались на розсилку (${group_name})`, {
             chat_id: callback.message.chat.id,
             message_id: callback.message.message_id,
             reply_markup: {

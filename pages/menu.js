@@ -4,6 +4,7 @@ const menu = require("../menu");
 
 module.exports = {
     name: "menu",
+    generate_link: true,
     func (callback) {
         bot.editMessageText("Що тобі потрібно сталкер?", {
             chat_id: callback.message.chat.id,

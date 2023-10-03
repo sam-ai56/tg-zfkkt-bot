@@ -5,6 +5,7 @@ const link = require("../link");
 
 module.exports = {
     name: "show_bells_schedule",
+    generate_link: true,
     func (callback) {
         var schedule = db.prepare(`SELECT * FROM Time`).all();
         var text = "";

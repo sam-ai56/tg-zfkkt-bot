@@ -1,3 +1,5 @@
+process.env.TZ = "Europe/Kiev"; // config timezone for bun
+
 require('dotenv').config();
 const env = process.env;
 
@@ -33,10 +35,15 @@ function emulate_callback_from_message(message, data) {
 function open_link(callback) {
     var start_timer = new Date().getTime();
     var data = callback.data.split(":");
+//    var from_start = data[0] == "start";
+
     page.list.forEach((p) => {
         if (p.link != data[1]){
             return;
         }
+
+        // if(from_start && p.allow_from_start == undefined)
+        //     return;
 
         var tc = data[0].split("_");
         if (tc[tc.length - 1 ] == "text")
@@ -46,7 +53,6 @@ function open_link(callback) {
         link.to = data[1];
         link.callback_data = callback.data;
         link.data = data.slice(2);
-
 
         try {
             p.func(callback);
@@ -60,7 +66,7 @@ function open_link(callback) {
 }
 
 bot.on('callback_query', (callback) => {
-    console.log(callback)
+    db.prepare("INSERT OR IGNORE INTO User (id) VALUES (?)").run(callback.from.id);
     if (middleware.mantenance_mode() && !middleware.is_admin(callback.from.id)) {
         bot.answerCallbackQuery(callback.id, {
             text: "Бот на технічному обслуговуванні. Спробуйте пізніше.",
@@ -76,7 +82,6 @@ bot.on('callback_query', (callback) => {
         bot.sendMessage(chat_id, "Будь ласка, перезапустіть бота або створіть нове меню /menu.");
         return;
     }
-
 });
 
 
@@ -85,8 +90,13 @@ function execute_command(msg) {
     const etc = args.shift().toLowerCase().split("@");
     var cmnd = etc[0].slice(1);
 
+    if(msg.chat.type != "private"){
+        if(etc[1] != "zfkkt_bot")
+            return;
+    }
+
     //!!!!!!!!!!!!!!!!!!
-    if(cmnd == "start")
+    if(cmnd == "start" && !args[0])
         cmnd = "menu";
 
     var is_command_exist = false;
@@ -123,14 +133,17 @@ function execute_command(msg) {
             console.log(error);
         }
     });
-    if(!is_command_exist){
-        if(etc[1])
-            if(etc[1] != "zfkkt_bot")
-                return;
-            // bot.sendMessage(msg.chat.id, "шо?", { reply_to_message_id: msg.message_id });
-            bot.sendSticker(msg.chat.id, "./tsd.jpeg", { reply_to_message_id: msg.message_id })
-        return;
-    }
+    // if(!is_command_exist){
+    //     if(!etc[1])
+    //         return;
+
+    //     if(etc[1])
+    //         // if(etc[1] != "zfkkt_bot")
+    //         //     return;
+    //         // bot.sendMessage(msg.chat.id, "шо?", { reply_to_message_id: msg.message_id });
+    //         //bot.sendSticker(msg.chat.id, "./tsd.jpeg", { reply_to_message_id: msg.message_id })
+    //     return;
+    // }
 }
 
 
@@ -154,59 +167,124 @@ function send_message_to_group(title, text) {
 }
 
 
+// var posts = [];
+// var timer_started = false;
+// // O_o ...
+// bot.on("channel_post", (post) => {
+//     if (post.chat.id != env.CHANNEL_ID)
+//         return;
+
+//     if (!post.photo && !post.video){
+//         db.prepare("SELECT * FROM GroupChat WHERE news_distribution = 1").all().forEach((chat) => {
+//             bot.forwardMessage(chat.id, env.CHANNEL_ID, post.message_id);
+//         });
+//         return;
+//     }
+
+//     posts.push(post);
+//     if (!timer_started){
+//         timer_started = true;
+//         setTimeout(() => {
+//             db.prepare("SELECT * FROM GroupChat WHERE news_distribution = 1").all().forEach((chat) => {
+//                 if (posts.length == 1)
+//                     return bot.forwardMessage(chat.id, env.CHANNEL_ID, posts[0].message_id);
+//                 bot.sendMediaGroup(chat.id, posts.map((p) => {
+//                     return {
+//                         type: p.photo? "photo" : "video",
+//                         media: p.photo? p.photo[0].file_id : p.video.file_id,
+//                         caption: p.caption,
+//                         caption_entities: p.caption_entities
+//                     }
+//                 }));
+//             });
+//             posts = [];
+//             timer_started = false;
+//         }, 100);
+//     }
+// });
+
+
 var posts = [];
 var timer_started = false;
-// O_o ...
-bot.on("channel_post", (post) => {
-    return;
-    if (post.chat.id != env.CHANNEL_ID)
-        return;
 
-    if (!post.photo && !post.video){
-        db.prepare("SELECT * FROM GroupChat WHERE news_distribution = 1").all().forEach((chat) => {
-            bot.forwardMessage(chat.id, env.CHANNEL_ID, post.message_id);
+bot.on('message', (msg) => {
+    const date = new Date();
+    if (msg.text && msg.text.startsWith("/")){
+        execute_command(msg);
+        return;
+    }
+
+    if (msg.chat.type == "private") {
+        db.prepare("INSERT OR IGNORE INTO User (id) VALUES (?)").run(msg.chat.id);
+    }
+
+    if (msg.chat.type == "private" && msg.text && msg.text.match(/^(http|https):\/\//)) {
+        if(!middleware.is_admin(msg.from.id) && !middleware.is_owner(msg.from.id))
+            return;
+
+        if(msg.text.split("/")[2] == "t.me")
+            return;
+
+        const code = link.gen_code("link", msg.text);
+
+        bot.sendMessage(msg.chat.id, `Створено посилання.\n\n<i>посилання можливо видалити за допомогою команди /removelink (посилання)</i>\n\n<code>https://t.me/zfkkt_bot?start=${code}</code>`, {
+            reply_to_message_id: msg.message_id,
+            parse_mode: "HTML",
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        {
+                            text: "Відкрити",
+                            web_app: {
+                                url: msg.text
+                            }
+                        }
+                    ]
+                ]
+            }
         });
         return;
     }
 
-    // posts.push(post);
-    // if (!timer_started){
-    //     timer_started = true;
-    //     setTimeout(() => {
-    //         db.prepare("SELECT * FROM GroupChat WHERE news_distribution = 1").all().forEach((chat) => {
-    //             console.log(posts);
-    //             if (posts.length == 1)
-    //                 return bot.forwardMessage(chat.id, env.CHANNEL_ID, posts[0].message_id);
-    //             bot.sendMediaGroup(chat.id, posts.forEach((p) => {
-    //                 return {
-    //                     type: p.photo? "photo" : "video",
-    //                     media: p.photo? p.photo[0].file_id : p.video.file_id,
-    //                     caption: p.caption? p.caption + `\n\n@zfkkt`: undefined,
-    //                     caption_entities: p.caption_entities,
-    //                 }
-    //             }));
-    //         });
-    //         posts = [];
-    //         timer_started = false;
-    //     }, 100);
-    // }
-});
-
-bot.on('message', (msg) => {
-    const date = new Date();
-
-    if (msg.text.startsWith("/")){
-        execute_command(msg);
+    if (middleware.is_admin(msg.from.id) && msg.chat.type == "private" && db.prepare("SELECT type FROM User WHERE id = ?").get(msg.from.id).type == undefined) {
+        posts.push({
+            from: msg.from,
+            object: msg
+        });
+        if (!timer_started){
+            timer_started = true;
+            setTimeout(() => {
+                var created_at = date.getTime();
+                db.prepare("INSERT INTO Post (created_by, created_at) VALUES (?, ?)").run(msg.from.id, created_at);
+                var post_id = db.prepare("SELECT id FROM Post WHERE created_at = ?").get(created_at).id;
+                posts.forEach((post) => {
+                    db.prepare("INSERT INTO PostContent (post_id, post_object) VALUES (?, ?)").run(post_id, JSON.stringify(post.object));
+                });
+                bot.sendMessage(msg.chat.id, "Хочете запостити новину?", {
+                    reply_markup: {
+                        inline_keyboard: [
+                            [
+                                {
+                                    text: "Так",
+                                    callback_data: link.gen_link(undefined, `post_news_q:1:${post_id}`)
+                                },
+                                {
+                                    text: "Ні",
+                                    callback_data: link.gen_link(undefined, `post_news_q:0:${post_id}`)
+                                }
+                            ]
+                        ]
+                    }
+                });
+                timer_started = false;
+                posts = [];
+            }, 100);
+        }
         return;
     }
 
     if (msg.chat.type != "private")
         return;
-
-    if (db.prepare("SELECT * FROM User WHERE id = ?").get(msg.from.id) == undefined) {
-        bot.sendMessage(chat_id, "Будь ласка, перезапустіть бота або створіть нове меню /menu.");
-        return;
-    }
 
     const chat_id = msg.chat.id;
 
@@ -217,45 +295,58 @@ bot.on('message', (msg) => {
     // }
 
     var data = db.prepare("SELECT type FROM User WHERE id = ?").get(chat_id).type;
+    if (!data)
+        return;
     data = data.split(":");
 
     switch (data[1]) {
         case 'offer_text':
             db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, data[1], date.getTime());
-            db.prepare("UPDATE User SET type = ? WHERE id = ?").run("", chat_id);
+            db.prepare("UPDATE User SET type = ? WHERE id = ?").run(null, chat_id);
             success_message(chat_id, "Твоя пропозиція була відправлена!");
             send_message_to_group("Пропозиція", msg.text)
             logger.log(msg, "Sended to group");
             break;
         case 'request_to_join_ss_text':
             db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, data[1], date.getTime());
-            db.prepare("UPDATE User SET type = ? WHERE id = ?").run("", chat_id);
+            db.prepare("UPDATE User SET type = ? WHERE id = ?").run(null, chat_id);
             success_message(chat_id, "Твоя заявка була відправлена!");
             send_message_to_group(`Заявка на вступ <i>@${msg.from.username}</i>`, msg.text)
             logger.log(msg, "Sended to group");
             break;
         case 'complaint_ss_text':
             db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, data[1], date.getTime());
-            db.prepare("UPDATE User SET type = ? WHERE id = ?").run("", chat_id);
+            db.prepare("UPDATE User SET type = ? WHERE id = ?").run(null, chat_id);
             success_message(chat_id, "Твою скаргу було відправлено!");
             send_message_to_group("Скарга на СС", msg.text)
             logger.log(msg, "Sended to group");
             break;
         case 'complaint_bot_text':
             db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, data[1], date.getTime());
-            db.prepare("UPDATE User SET type = ? WHERE id = ?").run("", chat_id);
+            db.prepare("UPDATE User SET type = ? WHERE id = ?").run(null, chat_id);
             success_message(chat_id, "Твою скаргу було відправлено!");
             send_message_to_group(`Скарга на бота <i>@${msg.from.username}</i>`, msg.text)
             logger.log(msg, "Sended to group");
             break;
         case 'complaint_teacher_text':
-            console.log(chat_id, data[1], date.getTime())
             db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, data[1], date.getTime());
-            db.prepare("UPDATE User SET type = ? WHERE id = ?").run("", chat_id);
+            db.prepare("UPDATE User SET type = ? WHERE id = ?").run(null, chat_id);
             var teacher = db.prepare("SELECT name FROM Teacher WHERE id = ?").get(data[2]).name;
             success_message(chat_id, `Твою скаргу на ${teacher} було відправлено!`);
             send_message_to_group(`Скарга на <i>${teacher}</i>`, msg.text)
             logger.log(msg, "Sended to group");
             break;
+        case 'schedule_mistake_text':
+            db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, data[1], date.getTime());
+            db.prepare("UPDATE User SET type = ? WHERE id = ?").run(null, chat_id);
+            success_message(chat_id, "Твою скаргу було відправлено!");
+            send_message_to_group(`Скарга на розклад <i>@${msg.from.username}</i>`, msg.text)
+            logger.log(msg, "Sended to group");
+            break;
     }
+});
+
+
+bot.on('polling_error', (error) => {
+    console.error(error);
 });

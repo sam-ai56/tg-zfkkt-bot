@@ -1,4 +1,5 @@
 const logger = require("./logger");
+const link = require("./link");
 const glob = require('glob').glob;
 var list = [];
 
@@ -12,10 +13,19 @@ module.exports = {
                 logger.error(`Link (${page.name}) is already registered! Ignoring...`);
                 return;
             }
+
             list.push({
                 link: page.name,
                 func: page.func,
+                // allow_from_start: page.allow_from_start
             });
+
+            if(!page.generate_link){
+                link.unregister_page(page.name);
+                return;
+            }
+
+            link.register_page(page.name);
         });
     }
 }

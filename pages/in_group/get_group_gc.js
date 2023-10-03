@@ -1,11 +1,11 @@
-const page = require("../page");
-const bot = require("../telegram").bot;
-const db = require("../database").sqlite;
-const link = require("../link");
+const page = require("../../page");
+const bot = require("../../telegram").bot;
+const db = require("../../database").sqlite;
+const link = require("../../link");
 const env = process.env;
 
 module.exports = {
-    name: "get_group_distribution_gc",
+    name: "get_group_gc",
     async func (callback) {
         var user = await bot.getChatMember(callback.message.chat.id, callback.from.id);
         if (user.status != "administrator" && user.status != "creator" && callback.from.id != env.OWNER_ID) {
@@ -17,7 +17,7 @@ module.exports = {
 
         var group_in_one_page = 9;
 
-        var groups = db.prepare("SELECT * FROM [Group]").all();
+        var groups = db.prepare("SELECT DISTINCT [Group].id, [Group].name FROM [Group] JOIN Schedule ON [Group].id = Schedule.group_id ORDER BY [Group].name ASC").all();
         var group_menu = [];
 
         groups.forEach((group, index) => {
@@ -36,7 +36,7 @@ module.exports = {
             group_menu[group_menu.length - 1].push(
                 {
                     text: group.name,
-                    callback_data: link.gen_link(link.to, `subscribe_distribution_gc:${group.id}`)
+                    callback_data: link.gen_link(link.to, `choose_group_gc:${group.id}`)
                 }
             );
         });

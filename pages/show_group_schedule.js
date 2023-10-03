@@ -41,25 +41,49 @@ module.exports = {
         var schedule_text = "";
         schedule.forEach((item, index) => {
             schedule_text += `╭─ <b>${index+1} пара </b>(${item.time_start_at} - ${item.time_end_at}):\n`
-            schedule_text += `│ •  <b>Предмет</b>: ${item.subject_name != null? item.subject_name: "ПУСТО"}\n`
-            schedule_text += `│ •  <b>Вчитель</b>: ${item.teacher_name != null? item.teacher_name: " ПУСТО"}\n`
-            schedule_text += `│ •  <b>Де</b>: ${item.room_name}\n`;
+            schedule_text += `│ •  <b>Предмет</b>: ${item.subject_name != null? item.subject_name: "Пусто"}\n`
+
+
+            var teacher_name = item.teacher_name;
+            if (teacher_name != null) {
+                var teacher_name_arr = teacher_name.split(" ");
+                var teacher_last_name = teacher_name_arr[1];
+                var teacher_second_name = teacher_name_arr[2];
+                teacher_name = teacher_name_arr[0] + " " + teacher_last_name[0] + ". " + teacher_second_name[0] + ".";
+            }
+
+
+            schedule_text += `│ •  <b>Вчитель</b>: ${item.teacher_name != null? teacher_name: "Пусто"}\n`
+            schedule_text += `│ •  <b>Де</b>: ${item.room_name != null? item.room_name: "Пусто"}\n`
             if (schedule[index+1] != undefined && schedule[index+1].time_start_at != item.time_start_at || index == schedule.length-1){
                 schedule_text += `╰───────\n`
             }
-            
+
             if (schedule[index+1] != undefined && schedule[index+1].time_start_at == item.time_start_at) {
                 var next_schedule = schedule[index+1];
                 // schedule_text += `╭───\n`
                 schedule_text += `├───────\n`
-                schedule_text += `│ ◿  <i><b>Предмет</b></i>: ${next_schedule.subject_name != null? next_schedule.subject_name: "ПУСТО"}\n`
-                schedule_text += `│ ◿  <i><b>Вчитель</b></i>: ${next_schedule.teacher_name != null? next_schedule.teacher_name: " ПУСТО"}\n`
-                schedule_text += `│ ◿  <i><b>Де</b></i>: ${next_schedule.room_name}\n`;
+                schedule_text += `│ ◿  <i><b>Предмет</b></i>: ${next_schedule.subject_name != null? next_schedule.subject_name: "Пусто"}\n`
+
+
+                var teacher_name = next_schedule.teacher_name;
+                if (teacher_name != null) {
+                    var teacher_name_arr = teacher_name.split(" ");
+                    var teacher_last_name = teacher_name_arr[1];
+                    var teacher_second_name = teacher_name_arr[2];
+                    teacher_name = teacher_name_arr[0] + " " + teacher_last_name[0] + ". " + teacher_second_name[0] + ".";
+                }
+
+
+                schedule_text += `│ ◿  <i><b>Вчитель</b></i>: ${next_schedule.teacher_name != null? teacher_name: "Пусто"}\n`
+                schedule_text += `│ ◿  <i><b>Де</b></i>: ${next_schedule.room_name != null? next_schedule.room_name: "Пусто"}\n`
                 schedule_text += `╰─────────────\n`;
                 schedule.splice(index+1, 1);
             }
             schedule_text += "\n";
         });
+
+        schedule_text += "<a href=\"https://t.me/zfkkt_bot?start=fr7WwJwZ\">помітили помилку?</a>";
 
         var keyboard = [];
         keyboard.push([
@@ -85,6 +109,7 @@ module.exports = {
             chat_id: callback.message.chat.id,
             message_id: callback.message.message_id,
             parse_mode: "HTML",
+            disable_web_page_preview: true,
             reply_markup: {
                 inline_keyboard: keyboard
             }

@@ -4,6 +4,7 @@ const menu = require("../menu");
 
 module.exports = {
     name: "complaint_menu",
+    generate_link: true,
     func (callback) {
         bot.editMessageText("Вибери тип скарги.", {
             chat_id: callback.message.chat.id,

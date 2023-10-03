@@ -128,3 +128,4 @@ dist
 
 sqlite.db
 package-lock.json
+help.json

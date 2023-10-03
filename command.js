@@ -27,6 +27,7 @@ module.exports = {
             list.push({
                 name: command.name,
                 description: command.description,
+                help_description: command.help_description,
                 func: command.func,
                 type: command.type,
                 chat_id: command.chat_id,
@@ -84,7 +85,6 @@ module.exports = {
                             }]
                         });
                     }
-                    //console.log(commands_by_types.chat)
                     break;
                 case "chat_administrators":
                     var is_chat_finded = false;
@@ -131,16 +131,15 @@ module.exports = {
                                 }
                             }]
                         });
-                        console.log(commands_by_types.chat_member[0]);
                     }
                     break;
                 // 🤓🤓🤓
-                default:
-                    commands_by_types["default"].push({
-                        command: command.name,
-                        description: command.description
-                    });
-                    break;
+                // default:
+                //     commands_by_types["default"].push({
+                //         command: command.name,
+                //         description: command.description
+                //     });
+                //     break;
             }
         });
 
@@ -180,6 +179,33 @@ module.exports = {
                 }
                 bot.setMyCommands(member[user_id], {scope:{type:"chat_member", chat_id: chat_id, user_id: user_id}});
             });
+        });
+
+        // create help.json from commands
+        var help = {
+            about: "",
+            commands: []
+        };
+
+        list.forEach(command => {
+            if (!command.help_description)
+                return;
+            help.commands.push({
+                name: command.name,
+                help_description: command.help_description,
+                type: command.type
+            });
+        });
+
+        help.commands.sort((a, b) => {
+            if(a.name > b.name) return 1;
+            if(a.name < b.name) return -1;
+            return 0;
+        });
+
+        const fs = require('fs');
+        fs.writeFile("help.json", JSON.stringify(help), (err) => {
+            if (err) throw err;
         });
     }
 }

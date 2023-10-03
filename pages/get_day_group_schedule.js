@@ -21,7 +21,6 @@ module.exports = {
             lday = 1;
         }
 
-
         var schedule = db.prepare(`
             SELECT Schedule.day, Time.start_at as time_start_at, Time.end_at as time_end_at, Subject.name AS subject_name, [Group].name AS group_name, Teacher.name AS teacher_name, Room.name AS room_name
             FROM Schedule

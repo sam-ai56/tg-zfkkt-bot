@@ -4,6 +4,7 @@ const bot = require("../telegram").bot;
 
 module.exports = {
     name: "ss_media",
+    generate_link: true,
     func (callback) {
         bot.editMessageText("Наші соц. мережі", {
             chat_id: callback.message.chat.id,

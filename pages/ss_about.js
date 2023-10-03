@@ -4,6 +4,7 @@ const link = require("../link");
 
 module.exports = {
     name: "ss_about",
+    generate_link: true,
     func (callback) {
         const text = require("../ss_about_text.json");
         bot.editMessageText(text, {

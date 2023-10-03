@@ -1,4 +1,7 @@
-const db = require("better-sqlite3")("sqlite.db");
+const Database = require("bun:sqlite").Database;
+const db = new Database("sqlite.db"); // bun
+
+// const db = require("better-sqlite3")("sqlite.db"); // nodejs
 
 module.exports = {
     sqlite: db,
@@ -10,7 +13,8 @@ module.exports = {
                     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                     type TEXT,
                     [group] INTEGER DEFAULT NULL,
-                    distribution INTEGER NOT NULL DEFAULT 0
+                    distribution INTEGER NOT NULL DEFAULT 0,
+                    is_admin BOOLEAN NOT NULL DEFAULT 0
                 );
 
                 CREATE TABLE IF NOT EXISTS GroupChat (
@@ -48,7 +52,7 @@ module.exports = {
 
                 CREATE TABLE IF NOT EXISTS Room (
                     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                    name TEXT NOT NULL
+                    name TEXT
                 );
 
                 CREATE TABLE IF NOT EXISTS Time (
@@ -59,7 +63,9 @@ module.exports = {
 
                 CREATE TABLE IF NOT EXISTS Distribution (
                     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                    schedule_id INTEGER NOT NULL,
+                    type TEXT NOT NULL DEFAULT "schedule",
+                    schedule_id INTEGER,
+                    chat_id INTEGER,
                     FOREIGN KEY (schedule_id) REFERENCES Schedule(id)
                 );
 
@@ -67,10 +73,10 @@ module.exports = {
                     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                     day INTEGER NOT NULL,
                     time_id INTEGER NOT NULL,
-                    subject_id INTEGER NOT NULL,
+                    subject_id INTEGER,
                     group_id INTEGER NOT NULL,
-                    teacher_id INTEGER NOT NULL,
-                    room_id INTEGER NOT NULL,
+                    teacher_id INTEGER,
+                    room_id INTEGER,
                     FOREIGN KEY (time_id) REFERENCES Time(id),
                     FOREIGN KEY (subject_id) REFERENCES Subject(id),
                     FOREIGN KEY (group_id) REFERENCES [Group](id),
@@ -92,7 +98,51 @@ module.exports = {
                     FOREIGN KEY (teacher_id) REFERENCES Teacher(id),
                     FOREIGN KEY (room_id) REFERENCES Room(id)
                 );
+
+                CREATE TABLE IF NOT EXISTS Link (
+                    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    shorted TEXT NOT NULL UNIQUE,
+                    type TEXT NOT NULL,
+                    url TEXT NOT NULL,
+                    expired_at INTEGER
+                );
+
+                CREATE TABLE IF NOT EXISTS Post (
+                    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    created_by INTEGER NOT NULL,
+                    created_at INTEGER NOT NULL,
+                    posted_at INTEGER,
+                    posted BOOLEAN NOT NULL DEFAULT 0,
+                    to_channel BOOLEAN NOT NULL DEFAULT 0,
+                    to_group BOOLEAN NOT NULL DEFAULT 0,
+                    FOREIGN KEY (created_by) REFERENCES User(id)
+                );
+
+                CREATE TABLE IF NOT EXISTS PostContent (
+                    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    post_id INTEGER NOT NULL,
+                    post_object TEXT NOT NULL,
+                    FOREIGN KEY (post_id) REFERENCES Post(id)
+                );
+
+                CREATE TABLE IF NOT EXISTS PostDistribution (
+                    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    post_id INTEGER NOT NULL,
+                    chat_id INTEGER NOT NULL,
+                    message_id INTEGER NOT NULL,
+                    FOREIGN KEY (post_id) REFERENCES Post(id)
+                );
+
+                CREATE TABLE IF NOT EXISTS AudytLog (
+                    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    title TEXT NOT NULL,
+                    description TEXT,
+                    post_id INTEGER,
+                    at INTEGER NOT NULL,
+                    FOREIGN KEY (user_id) REFERENCES User(id)
+                );
             `
         );
-    },
+    }
 }

@@ -13,6 +13,7 @@ const text = `
 
 module.exports = {
     name: "pumba_info",
+    generate_link: true,
     func (callback) {
         bot.editMessageText(text, {
             chat_id: callback.message.chat.id,

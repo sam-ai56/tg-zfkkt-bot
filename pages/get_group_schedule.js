@@ -11,9 +11,9 @@ module.exports = {
 
         var group_in_one_page = 9;
 
-        var groups = db.prepare("SELECT * FROM [Group]").all();// ORDER BY name COLLATE NOCASE
+        var groups = db.prepare("SELECT DISTINCT [Group].id, [Group].name FROM [Group] JOIN Schedule ON [Group].id = Schedule.group_id ORDER BY [Group].name ASC").all();
         var group_menu = [];
-        
+
         var day = new Date().getDay();
         if (day == 6 || day == 0) {
             day = 1;

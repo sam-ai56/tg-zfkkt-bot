@@ -11,7 +11,7 @@ module.exports = {
 
         var group_in_one_page = 9;
 
-        var groups = db.prepare("SELECT * FROM [Group]").all();
+        var groups = db.prepare("SELECT DISTINCT [Group].id, [Group].name FROM [Group] JOIN Schedule ON [Group].id = Schedule.group_id ORDER BY [Group].name ASC").all();
         var group_menu = [];
 
         groups.forEach((group, index) => {

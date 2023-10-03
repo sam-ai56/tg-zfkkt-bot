@@ -3,8 +3,12 @@ const db = require("./database").sqlite;
 
 module.exports = {
     is_admin(id) {
-        var row = db.prepare("SELECT is_admin FROM User WHERE id = ?").get(id).is_admin;
-        if (row == 0) {
+        var row = db.prepare("SELECT is_admin FROM User WHERE id = ?").get(id);
+        if (!row) {
+            return false;
+        }
+
+        if (row.is_admin == 0) {
             return false;
         }
 

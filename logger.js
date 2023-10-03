@@ -44,7 +44,7 @@ bot.on('message', (msg) => {
     if (!middleware.debug_mode())
         return;
 
-    if (msg.chat.type != "private" && msg.chat.type != "channel")
+    if (msg.chat.type != "private")
         return;
 
     if (msg.animation){
