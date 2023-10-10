@@ -23,11 +23,11 @@ module.exports = {
 
         var text = "";
 
-        const map = await axios({
-            method: "get",
-            url: "https://alerts.com.ua/map.png",
-            responseType: "stream"
-        });
+        // const map = await axios({
+        //     method: "get",
+        //     url: "https://alerts.com.ua/map.png",
+        //     responseType: "stream"
+        // });
 
         const alerts = b_data.alerts;
 
@@ -38,14 +38,14 @@ module.exports = {
                 text += `❗ ${alert.location_title}\n`;
         });
 
-        if(!map){
-            bot.sendMessage(msg.chat.id, text, {
-                reply_to_message_id: msg.message_id
-            });
-            return;
-        }
+        // if(!map){
+        //     bot.sendMessage(msg.chat.id, text, {
+        //         reply_to_message_id: msg.message_id
+        //     });
+        //     return;
+        // }
 
-        bot.sendPhoto(msg.chat.id, map.data, {
+        bot.sendPhoto(msg.chat.id, "https://alerts.com.ua/map.png", {
             reply_to_message_id: msg.message_id,
             caption: text
         });
