@@ -9,6 +9,9 @@ module.exports = {
         const data = link.data;
         const audyt = db.prepare("SELECT * FROM AudytLog WHERE id = ?").get(data[0]);
         const user = await bot.getChat(audyt.user_id);
+        let is_username = user.username ? true : false;
+        const username = is_username? user.username : user.first_name;
+
         const date = new Date(audyt.at);
         const day = date.getDate().toString().padStart(2, '0');
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -19,7 +22,7 @@ module.exports = {
         const date_str = `${day}.${month}.${year}`;
         const time_str = `${hours}:${minutes}`;
 
-        bot.editMessageText(`Час: ${time_str}\nДата: ${date_str}\nОпис: ${audyt.description}\nКористувач: @${user.username}`, {
+        bot.editMessageText(`Час: ${time_str}\nДата: ${date_str}\nОпис: ${audyt.description}\nКористувач: ${is_username? "@" : ""}${username}`, {
             chat_id: callback.message.chat.id,
             message_id: callback.message.message_id,
             reply_markup: {

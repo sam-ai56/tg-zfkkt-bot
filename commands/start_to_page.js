@@ -72,7 +72,7 @@ module.exports = {
                     return;
                 }
 
-                if (result.request.res.responseUrl != url) {
+                if (result.request.res && result.request.res.responseUrl != url) {
                     url = result.request.res.responseUrl;
                     domen = url.split("/")[2];
                 }

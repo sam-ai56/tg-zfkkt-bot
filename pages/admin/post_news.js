@@ -90,6 +90,12 @@ function send_post(post_id, post_content, to_channel, to_groups, callback){
 
     db.prepare("INSERT INTO AudytLog (user_id, description, post_id, at) VALUES (?, ?, ?, ?)").run(callback.from.id, aydyt_message, post_id, Date.now());
 
+    db.prepare("SELECT * FROM User WHERE is_admin = 1").all().forEach((admin) => {
+        let is_username = callback.from.username ? true : false;
+        const username = is_username? callback.from.username : callback.from.first_name;
+        bot.sendMessage(admin.id, `${aydyt_message} (${is_username? "@" : ""}${username})`);
+    });
+
     const success_message = to_channel && to_groups? "Відправлено до каналу та груп!" : to_channel? "Відправлено до каналу!" : "Відправлено до груп!";
 
     bot.editMessageText(success_message, {
@@ -106,7 +112,6 @@ function send_post(post_id, post_content, to_channel, to_groups, callback){
             ]
         }
     });
-
 }
 
 module.exports = {

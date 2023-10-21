@@ -134,7 +134,7 @@ module.exports = {
 
 
                     schedule_text += `│ •  <b>Вчитель</b>: ${schedule.teacher_name != null? teacher_name: "Пусто"}\n`
-                    schedule_text += `│ •  <b>Де</b>: ${schedule.room_name}\n`;
+                    schedule_text += `│ •  <b>Де</b>: ${schedule.room_name != null? schedule.room_name: " Пусто"}\n`;
                     schedule_text += `╰───────\n`;
 
                     if (schedules[shedule_index+1] != undefined && schedules[shedule_index+1].time_start_at == schedule.time_start_at && schedules[shedule_index+1].group_id == schedule.group_id) {

@@ -9,7 +9,7 @@ module.exports = {
         const data = link.data;
         const post_id = data[0];
         const post = db.prepare("SELECT * FROM Post WHERE id = ?").get(post_id);
-        const date = new Date();
+        const date = new Date(post.posted_at);
 
         const day = date.getDate().toString().padStart(2, '0');
         const month = (date.getMonth() + 1).toString().padStart(2, '0');
@@ -21,8 +21,10 @@ module.exports = {
         const time_str = `${hours}:${minutes}`;
 
         const user = await bot.getChat(post.created_by);
+        let is_username = user.username ? true : false;
+        const username = is_username? user.username : user.first_name;
 
-        bot.editMessageText(`Час публікації: ${time_str}\nДата публікації: ${date_str}\nОпубліковав: @${user.username}\nВідправлено до: (${post.to_channel? "каналу": ""}${post.to_group? ", чатів": ""})`, {
+        bot.editMessageText(`Час публікації: ${time_str}\nДата публікації: ${date_str}\nОпубліковав: ${is_username? "@" : ""}${username}\nВідправлено до: (${post.to_channel? "каналу": ""}${post.to_group? ", чатів": ""})`, {
             chat_id: callback.message.chat.id,
             message_id: callback.message.message_id,
             reply_markup: {

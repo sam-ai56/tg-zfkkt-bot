@@ -11,10 +11,13 @@ module.exports = {
 
         const user = await bot.getChat(admin_id);
 
+        let is_username = user.username ? true : false;
+        const username = is_username? user.username : user.first_name;
+
         if(!user)
             return;
 
-        bot.editMessageText(`Адміністратор: @${user.username}`, {
+        bot.editMessageText(`Адміністратор: ${is_username? "@" : ""}${username}`, {
             chat_id: callback.message.chat.id,
             message_id: callback.message.message_id,
             reply_markup: {

@@ -14,7 +14,12 @@ module.exports = {
         }
 
         var text = "";
-        text += `<b><i>Група:</i></b> ${chat? group.name? group.name : "Не вибрана": "Не вибрана"}\n`;
+        text += `<b><i>Група:</i></b> ${
+            chat? 
+                group.name? group.name : "Не вибрана"
+                :
+                "Не вибрана"
+            }\n`;
         text += `<b><i>Розсилка розкладу:</i></b> ${chat? chat.schedule_distribution ? "Активна" : "Вимкнена" : "Вимкнена"}\n`;
         text += `<b><i>Розсилка новин:</i></b> ${chat? chat.news_distribution ? "Активна" : "Вимкнена" : "Вимкнена"}\n`;
 

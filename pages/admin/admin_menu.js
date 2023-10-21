@@ -22,6 +22,12 @@ module.exports = {
                         },
                     ],
                     [
+                        {
+                            text: "Інфо для адмінів",
+                            callback_data: link.gen_link("admin_menu", "admin_info")
+                        }
+                    ],
+                    [
                         link.back_button("menu", true)
                     ]
                 ]

@@ -15,9 +15,11 @@ module.exports = {
         var keyboard = [];
         for (var i = 0; i < admins.length; i++) {
             const user = await bot.getChat(admins[i].id);
+            let is_username = user.username ? true : false;
+            const username = is_username? user.username : user.first_name;
             keyboard.push([
                 {
-                    text: `@${user.username}`,
+                    text: `${is_username? "@" : ""}${username}`,
                     callback_data: link.gen_link(link.to, `show_admin:${admins[i].id}`)
                 }
             ]);

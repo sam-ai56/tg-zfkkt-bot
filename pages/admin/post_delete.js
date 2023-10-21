@@ -29,6 +29,12 @@ module.exports = {
 
         db.prepare("INSERT INTO AudytLog (user_id, description, post_id, at) VALUES (?, ?, ?, ?)").run(callback.from.id, "Видалення поста", post_id, Date.now());
 
+        db.prepare("SELECT * FROM User WHERE is_admin = 1").all().forEach((admin) => {
+            let is_username = callback.from.username ? true : false;
+            const username = is_username? callback.from.username : callback.from.first_name;
+            bot.sendMessage(admin.id, `Видалення поста (${is_username? "@" : ""}${username})`);
+        });
+
         bot.editMessageText("Пост видалено", {
             chat_id: callback.message.chat.id,
             message_id: callback.message.message_id,

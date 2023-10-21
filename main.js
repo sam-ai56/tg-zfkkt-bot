@@ -12,6 +12,8 @@ const db = database.sqlite;
 database.init();
 
 const bot = require("./telegram").bot;
+const bot_info = await bot.getMe();
+
 const logger = require("./logger");
 
 const link = require("./link");
@@ -90,10 +92,10 @@ function execute_command(msg) {
     const etc = args.shift().toLowerCase().split("@");
     var cmnd = etc[0].slice(1);
 
-    if(msg.chat.type != "private"){
-        if(etc[1] != "zfkkt_bot")
-            return;
-    }
+    // if(msg.chat.type != "private"){
+    //     if(etc[1] != "zfkkt_bot")
+    //         return;
+    // }
 
     //!!!!!!!!!!!!!!!!!!
     if(cmnd == "start" && !args[0])
@@ -166,52 +168,18 @@ function send_message_to_group(title, text) {
     bot.sendMessage(env.GROUP_ID, `<b>${title}</b>\n<em>${text}</em>`, {parse_mode: "HTML"});
 }
 
-
-// var posts = [];
-// var timer_started = false;
-// // O_o ...
-// bot.on("channel_post", (post) => {
-//     if (post.chat.id != env.CHANNEL_ID)
-//         return;
-
-//     if (!post.photo && !post.video){
-//         db.prepare("SELECT * FROM GroupChat WHERE news_distribution = 1").all().forEach((chat) => {
-//             bot.forwardMessage(chat.id, env.CHANNEL_ID, post.message_id);
-//         });
-//         return;
-//     }
-
-//     posts.push(post);
-//     if (!timer_started){
-//         timer_started = true;
-//         setTimeout(() => {
-//             db.prepare("SELECT * FROM GroupChat WHERE news_distribution = 1").all().forEach((chat) => {
-//                 if (posts.length == 1)
-//                     return bot.forwardMessage(chat.id, env.CHANNEL_ID, posts[0].message_id);
-//                 bot.sendMediaGroup(chat.id, posts.map((p) => {
-//                     return {
-//                         type: p.photo? "photo" : "video",
-//                         media: p.photo? p.photo[0].file_id : p.video.file_id,
-//                         caption: p.caption,
-//                         caption_entities: p.caption_entities
-//                     }
-//                 }));
-//             });
-//             posts = [];
-//             timer_started = false;
-//         }, 100);
-//     }
-// });
-
-
 var posts = [];
 var timer_started = false;
 
-bot.on('message', (msg) => {
+bot.on('message', async (msg) => {
     const date = new Date();
     if (msg.text && msg.text.startsWith("/")){
         execute_command(msg);
         return;
+    }
+
+    if (msg.new_chat_member && msg.new_chat_member.id == bot_info.id) {
+        command.register_commands();
     }
 
     if (msg.chat.type == "private") {
@@ -287,12 +255,6 @@ bot.on('message', (msg) => {
         return;
 
     const chat_id = msg.chat.id;
-
-    // if (!msg.text && msg.chat.type == "private") {
-    //     console.log(msg.sticker.file_unique_id);
-    //     bot.sendSticker(chat_id, "CAACAgIAAxkBAAJSimTdpCFJGv-SPvrk9J9bTr7X6_MPAALGIwACU_kZSX1Vt2WaGsO2MAQ");
-    //     return;
-    // }
 
     var data = db.prepare("SELECT type FROM User WHERE id = ?").get(chat_id).type;
     if (!data)

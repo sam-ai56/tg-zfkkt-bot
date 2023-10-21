@@ -2,6 +2,15 @@ const logger = require("./logger");
 const bot = require("./telegram").bot;
 const glob = require('glob').glob;
 var list = [];
+var commands_by_types = {
+    all_private_chats: [],
+    all_group_chats: [],
+    all_chat_administrators: [],
+    chat: [],
+    chat_administrators: [],
+    chat_member: [],
+    default: []
+};
 
 // list
 //   name: "/hello"
@@ -13,8 +22,49 @@ var list = [];
 //   }
 //
 
+function register_commands() {
+    bot.setMyCommands(commands_by_types.default, {scope: {type: "default"}});
+
+    bot.setMyCommands(commands_by_types.all_private_chats, {scope: {type: "all_private_chats"}})
+
+    bot.setMyCommands(commands_by_types.all_group_chats, {scope: {type: "all_group_chats"}})
+
+    bot.setMyCommands(commands_by_types.all_chat_administrators, {scope: {type: "all_chat_administrators"}})
+
+    commands_by_types.chat.forEach(chat => {
+        var chat_id = Object.keys(chat)[0];
+        if(typeof(commands) == "object"){
+            bot.setMyCommands([chat[chat_id]], {scope:{type:"chat", chat_id: chat_id}});
+            return;
+        }
+        bot.setMyCommands(chat[chat_id], {scope:{type:"chat", chat_id: chat_id}});
+    });
+
+    commands_by_types.chat_administrators.forEach(chat => {
+        var chat_id = Object.keys(chat)[0];
+        if (typeof(chat[chat_id]) == "object"){
+            bot.setMyCommands([chat[chat_id]], {scope:{type:"chat_administrators", chat_id: chat_id}});
+            return;
+        }
+        bot.setMyCommands(chat[chat_id], {scope:{type:"chat_administrators", chat_id: chat_id}});
+    });
+
+    commands_by_types.chat_member.forEach(chat => {
+        var chat_id = Object.keys(chat)[0];
+        chat[chat_id].forEach(member => {
+            var user_id = Object.keys(member)[0];
+            if (typeof(member[user_id]) == "object"){
+                bot.setMyCommands([member[user_id]], {scope:{type:"chat_member", chat_id: chat_id, user_id: user_id}});
+                return;
+            }
+            bot.setMyCommands(member[user_id], {scope:{type:"chat_member", chat_id: chat_id, user_id: user_id}});
+        });
+    });
+}
+
 module.exports = {
     list,
+    commands_by_types,
     async init() {
         // local registeration of commands
         const files = await glob('commands/**/*.js');
@@ -34,16 +84,6 @@ module.exports = {
                 user_id: command.user_id
             });
         });
-
-        var commands_by_types = {
-            all_private_chats: [],
-            all_group_chats: [],
-            all_chat_administrators: [],
-            chat: [],
-            chat_administrators: [],
-            chat_member: [],
-            default: []
-        };
 
         // sorting commands for setMyCommands
         list.forEach(command => {
@@ -143,43 +183,8 @@ module.exports = {
             }
         });
 
-        bot.setMyCommands(commands_by_types.default, {scope: {type: "default"}});
-
-        bot.setMyCommands(commands_by_types.all_private_chats, {scope: {type: "all_private_chats"}})
-
-        bot.setMyCommands(commands_by_types.all_group_chats, {scope: {type: "all_group_chats"}})
-
-        bot.setMyCommands(commands_by_types.all_chat_administrators, {scope: {type: "all_chat_administrators"}})
-
-        commands_by_types.chat.forEach(chat => {
-            var chat_id = Object.keys(chat)[0];
-            if(typeof(commands) == "object"){
-                bot.setMyCommands([chat[chat_id]], {scope:{type:"chat", chat_id: chat_id}});
-                return;
-            }
-            bot.setMyCommands(chat[chat_id], {scope:{type:"chat", chat_id: chat_id}});
-        });
-
-        commands_by_types.chat_administrators.forEach(chat => {
-            var chat_id = Object.keys(chat)[0];
-            if (typeof(chat[chat_id]) == "object"){
-                bot.setMyCommands([chat[chat_id]], {scope:{type:"chat_administrators", chat_id: chat_id}});
-                return;
-            }
-            bot.setMyCommands(chat[chat_id], {scope:{type:"chat_administrators", chat_id: chat_id}});
-        });
-
-        commands_by_types.chat_member.forEach(chat => {
-            var chat_id = Object.keys(chat)[0];
-            chat[chat_id].forEach(member => {
-                var user_id = Object.keys(member)[0];
-                if (typeof(member[user_id]) == "object"){
-                    bot.setMyCommands([member[user_id]], {scope:{type:"chat_member", chat_id: chat_id, user_id: user_id}});
-                    return;
-                }
-                bot.setMyCommands(member[user_id], {scope:{type:"chat_member", chat_id: chat_id, user_id: user_id}});
-            });
-        });
+        register_commands();
+        setInterval(() => register_commands(), 60_000);
 
         // create help.json from commands
         var help = {
@@ -207,5 +212,6 @@ module.exports = {
         fs.writeFile("help.json", JSON.stringify(help), (err) => {
             if (err) throw err;
         });
-    }
+    },
+    register_commands
 }
