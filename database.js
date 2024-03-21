@@ -1,8 +1,6 @@
 const Database = require("bun:sqlite").Database;
 const db = new Database("sqlite.db"); // bun
 
-// const db = require("better-sqlite3")("sqlite.db"); // nodejs
-
 module.exports = {
     sqlite: db,
 
@@ -21,7 +19,7 @@ module.exports = {
                     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                     [group] INTEGER DEFAULT NULL,
                     schedule_distribution INTEGER NOT NULL DEFAULT 0,
-                    news_distribution INTEGER NOT NULL DEFAULT 0
+                    news_distribution INTEGER NOT NULL DEFAULT 1
                 );
 
                 CREATE TABLE IF NOT EXISTS Teacher (
@@ -84,21 +82,6 @@ module.exports = {
                     FOREIGN KEY (room_id) REFERENCES Room(id)
                 );
 
-                CREATE TABLE IF NOT EXISTS Schedule2 (
-                    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
-                    day INTEGER NOT NULL,
-                    time_id INTEGER NOT NULL,
-                    subject_id INTEGER NOT NULL,
-                    group_id INTEGER NOT NULL,
-                    teacher_id INTEGER NOT NULL,
-                    room_id INTEGER NOT NULL,
-                    FOREIGN KEY (time_id) REFERENCES Time(id),
-                    FOREIGN KEY (subject_id) REFERENCES Subject(id),
-                    FOREIGN KEY (group_id) REFERENCES [Group](id),
-                    FOREIGN KEY (teacher_id) REFERENCES Teacher(id),
-                    FOREIGN KEY (room_id) REFERENCES Room(id)
-                );
-
                 CREATE TABLE IF NOT EXISTS Link (
                     id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
                     shorted TEXT NOT NULL UNIQUE,
@@ -141,6 +124,18 @@ module.exports = {
                     post_id INTEGER,
                     at INTEGER NOT NULL,
                     FOREIGN KEY (user_id) REFERENCES User(id)
+                );
+            `
+        );
+
+        db.exec(`
+                CREATE TABLE IF NOT EXISTS Transmission (
+                    id INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                    user_id INTEGER NOT NULL,
+                    original_msg_chat_id INTEGER NOT NULL,
+                    original_msg_id INTEGER NOT NULL,
+                    sent_msg_id INTEGER NOT NULL,
+                    sent_to_chat_id INTEGER NOT NULL
                 );
             `
         );

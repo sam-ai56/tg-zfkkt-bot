@@ -94,7 +94,7 @@ async function init () {
         }
 
 
-        const to_root_folder = folders_path.split("/").pop() == "" ? folders_path.split("/").slice(0, -1).map(() => "..").join("/") : folders_path.split("/").map(() => "..").join("/");
+        const to_root_folder = folders_path.split("/").pop() == "" ? folders_path.split("/").slice(1, -1).map(() => "..").join("/") : folders_path.split("/").map(() => "..").join("/");
 
 
         const constants = await checkbox({

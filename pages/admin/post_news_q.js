@@ -5,6 +5,7 @@ const env = process.env;
 
 module.exports = {
     name: "post_news_q",
+    access: "admin",
     func (callback) {
         const data = link.data;
         const post_id = data[1];
@@ -17,17 +18,17 @@ module.exports = {
                     reply_markup: {
                         inline_keyboard: [
                             [
-                                {
-                                    text: "Канал",
-                                    callback_data: link.gen_link(link.from, `post_news:1:${post_id}`)
-                                },
-                                {
-                                    text: "Групи",
-                                    callback_data: link.gen_link(link.from, `post_news:2:${post_id}`)
-                                },
+                                // {
+                                //     text: "Канал",
+                                //     callback_data: link.gen_link(link.from, `post_news:1:${post_id}`)
+                                // },
                                 {
                                     text: "Усюди",
                                     callback_data: link.gen_link(link.from, `post_news:3:${post_id}`)
+                                },
+                                {
+                                    text: "Тільки у групи",
+                                    callback_data: link.gen_link(link.from, `post_news:2:${post_id}`)
                                 }
                             ],
                             [

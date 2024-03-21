@@ -5,6 +5,7 @@ const env = process.env;
 
 module.exports = {
     name: "post_delete",
+    access: "admin",
     func (callback) {
         const data = link.data;
         const post_id = data[1];
@@ -30,6 +31,9 @@ module.exports = {
         db.prepare("INSERT INTO AudytLog (user_id, description, post_id, at) VALUES (?, ?, ?, ?)").run(callback.from.id, "Видалення поста", post_id, Date.now());
 
         db.prepare("SELECT * FROM User WHERE is_admin = 1").all().forEach((admin) => {
+            if (admin.id == callback.from.id)
+                return;
+
             let is_username = callback.from.username ? true : false;
             const username = is_username? callback.from.username : callback.from.first_name;
             bot.sendMessage(admin.id, `Видалення поста (${is_username? "@" : ""}${username})`);

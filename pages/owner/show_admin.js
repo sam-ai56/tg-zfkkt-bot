@@ -5,6 +5,7 @@ const env = process.env;
 
 module.exports = {
     name: "show_admin",
+    access: "owner",
     async func (callback) {
         const admin_id = link.data[0];
         const admin = db.prepare("SELECT * FROM User WHERE id = ?").get(admin_id);

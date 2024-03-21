@@ -4,7 +4,7 @@ const env = process.env;
 module.exports = {
     name: "su_news",
     description: "Підписати/відписати розсилку новин для групи.",
-    help_description: "Адміністратор групи може підписати групу на розсилку новин. Новини будуть розсилатись з нашого телеграм каналу @zfkkt.",
+    help_description: "Адміністратор групи може підписати/відписати групу на розсилку новин. Новини будуть розсилатись з нашого телеграм каналу @zfkkt.",
     type: "all_group_chats",
     chat_id: undefined,
     user_id: undefined,
@@ -18,13 +18,15 @@ module.exports = {
             return;
         }
 
-        const is_group_chosen = db.prepare("SELECT * FROM GroupChat WHERE id = ? AND [group] IS NOT NULL").get(msg.chat.id);
-        if (!is_group_chosen) {
-            bot.sendMessage(msg.chat.id, "Спочатку виберіть групу. /choose_group", {
-                reply_to_message_id: msg.message_id
-            });
-            return;
-        }
+        db.prepare("INSERT OR IGNORE INTO GroupChat (id) VALUES (?)").run(msg.chat.id);
+
+        // const is_group_chosen = db.prepare("SELECT * FROM GroupChat WHERE id = ? AND [group] IS NOT NULL").get(msg.chat.id);
+        // if (!is_group_chosen) {
+        //     bot.sendMessage(msg.chat.id, "Спочатку виберіть групу. /choose_group", {
+        //         reply_to_message_id: msg.message_id
+        //     });
+        //     return;
+        // }
 
         const is_subscribed = db.prepare("SELECT * FROM GroupChat WHERE id = ? AND news_distribution = 1").get(msg.chat.id);
         if (is_subscribed) {

@@ -5,6 +5,7 @@ const text = `https://t.me/zfkkt_bot?start=x7uR13g5`;
 
 module.exports = {
     name: "admin_info",
+    access: "admin",
     func (callback) {
         bot.editMessageText(text, {
             chat_id: callback.message.chat.id,

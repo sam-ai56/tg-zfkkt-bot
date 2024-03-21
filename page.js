@@ -16,6 +16,7 @@ module.exports = {
 
             list.push({
                 link: page.name,
+                access: page.access,
                 func: page.func,
                 // allow_from_start: page.allow_from_start
             });

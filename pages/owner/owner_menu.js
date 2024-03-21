@@ -6,6 +6,7 @@ const menu = require("../../menu");
 
 module.exports = {
     name: "owner_menu",
+    access: "owner",
     func (callback) {
         bot.editMessageText("Меню власника.", {
             chat_id: callback.message.chat.id,

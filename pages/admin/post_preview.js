@@ -5,6 +5,7 @@ const env = process.env;
 
 module.exports = {
     name: "post_preview",
+    access: "admin",
     func (callback) {
         const data = link.data;
         const post_id = data[0];

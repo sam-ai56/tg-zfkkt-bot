@@ -31,6 +31,20 @@ async function init () {
             validate: input => validate_input(input),
         }, {clearPromptOnDone: true});
     }
+    
+    const is_limitless_access = await confirm({
+	message: "Доступ до сторінки обмежений окремим типом користувачів?",
+	initial: false
+    }, {clearPromptOnDone: true});
+    
+    var access_type = null;
+        
+    if (is_limitless_access)
+	access_type = await input({
+	    message: "Для кого буде доступна сторінка? (admin, owner, ...)",
+	    default: "admin",
+	    validate: input => validate_input(input)
+	}, {clearPromptOnDone: true});
 
     await input({
         message: "Шлях до файлу:",
@@ -61,9 +75,7 @@ async function init () {
             fs.mkdirSync(folders_path, {recursive: true});
         }
 
-
-        const to_root_folder = folders_path.split("/").pop() == "" ? folders_path.split("/").slice(0, -1).map(() => "..").join("/") : folders_path.split("/").map(() => "..").join("/");
-
+        const to_root_folder = folders_path.split("/").pop() == "" ? folders_path.split("/").slice(1, -1).map(() => "..").join("/") : folders_path.split("/").map(() => "..").join("/");
 
         const constants = await checkbox({
             message: "Що тобі",
@@ -94,6 +106,7 @@ async function init () {
 
 module.exports = {
     name: "${page_name}",
+    access: "${access_type}",
     func (callback) {
         console.log("HELLO FROM (${page_name}) PAGE!");
     }

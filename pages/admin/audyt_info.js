@@ -5,6 +5,7 @@ const env = process.env;
 
 module.exports = {
     name: "audyt_info",
+    access: "admin",
     async func (callback) {
         const data = link.data;
         const audyt = db.prepare("SELECT * FROM AudytLog WHERE id = ?").get(data[0]);
@@ -26,7 +27,7 @@ module.exports = {
             chat_id: callback.message.chat.id,
             message_id: callback.message.message_id,
             reply_markup: {
-                inline_keyboard: link.back_button("audyt")
+                inline_keyboard: link.back_button(link.data[1] ? `audyt:${link.data[1]}`: `audyt:0`)
             }
         });
     }

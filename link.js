@@ -14,8 +14,32 @@ module.exports = {
     to,
     callback_data,
     data,
-    gen_link(_from, _to){
-        return `${_from}:${_to}`
+    gen_link(_from, _args){
+        // !!!
+        if (typeof _args == "string")
+            return `${_from}:${_args}`
+
+        var args = undefined;
+
+        console.log("--------------");
+
+        _args.forEach((arg, index) => {
+            if (index == 0){
+                console.log("?", arg, index);
+                return args = `${arg}`;
+            }
+
+            console.log("?", arg, index);
+
+            return args += `:${arg}`;
+        });
+
+
+        console.log(`${_from}:${args}`);
+
+        console.log("--------------")
+
+        return `${_from}:${args}`;
     },
     gen_code(type, url, expired_at = null){
         const charset = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789";
@@ -49,7 +73,7 @@ module.exports = {
                 text: 'Назад',
                 callback_data: this.gen_link(this.to, _to),
             };
-    
+
         return [
             [
                 {

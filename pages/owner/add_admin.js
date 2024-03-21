@@ -5,6 +5,7 @@ const link = require("../../link");
 
 module.exports = {
     name: "add_admin",
+    access: "owner",
     func (callback) {
         const date = new Date();
         const expired_at = date.getTime() + 86400000;

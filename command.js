@@ -173,13 +173,6 @@ module.exports = {
                         });
                     }
                     break;
-                // 🤓🤓🤓
-                // default:
-                //     commands_by_types["default"].push({
-                //         command: command.name,
-                //         description: command.description
-                //     });
-                //     break;
             }
         });
 
@@ -195,6 +188,7 @@ module.exports = {
         list.forEach(command => {
             if (!command.help_description)
                 return;
+
             help.commands.push({
                 name: command.name,
                 help_description: command.help_description,

@@ -2,8 +2,6 @@ const bot = require("../../telegram").bot;
 const db = require("../../database").sqlite;
 const env = process.env;
 const bridges = require("../../bridges");
-const axios = require("axios");
-
 
 module.exports = {
     name: "alerts",
@@ -23,12 +21,6 @@ module.exports = {
 
         var text = "";
 
-        // const map = await axios({
-        //     method: "get",
-        //     url: "https://alerts.com.ua/map.png",
-        //     responseType: "stream"
-        // });
-
         const alerts = b_data.alerts;
 
         text += `Повітряна тривога у регіонах:\n`
@@ -45,9 +37,21 @@ module.exports = {
         //     return;
         // }
 
-        bot.sendPhoto(msg.chat.id, "https://alerts.com.ua/map.png", {
-            reply_to_message_id: msg.message_id,
-            caption: text
-        });
+        try {
+            let response = await fetch("https://alerts.com.ua/map.png");
+            let data = await response.arrayBuffer();
+
+            await bot.sendPhoto(msg.chat.id, Buffer.from(data), {
+                reply_to_message_id: msg.message_id,
+                caption: text
+            },
+            {
+                filename: 'alerts.png',
+                contentType: 'image/png',
+            });
+        } catch (e)
+        {
+            console.log(e);
+        }
     }
 }

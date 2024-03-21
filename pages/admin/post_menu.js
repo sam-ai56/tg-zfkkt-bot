@@ -5,6 +5,7 @@ const env = process.env;
 
 module.exports = {
     name: "post_menu",
+    access: "admin",
     async func (callback) {
         const data = link.data;
         const post_id = data[0];
@@ -24,7 +25,18 @@ module.exports = {
         let is_username = user.username ? true : false;
         const username = is_username? user.username : user.first_name;
 
-        bot.editMessageText(`Час публікації: ${time_str}\nДата публікації: ${date_str}\nОпубліковав: ${is_username? "@" : ""}${username}\nВідправлено до: (${post.to_channel? "каналу": ""}${post.to_group? ", чатів": ""})`, {
+        let where = "";
+
+        if(post.to_channel)
+            where += "каналу";
+
+        if(post.to_channel && post.to_group)
+            where += " та ";
+
+        if(post.to_group)
+            where += "чатів";
+
+        bot.editMessageText(`Час публікації: ${time_str}\nДата публікації: ${date_str}\nОпубліковав: ${is_username? "@" : ""}${username}\nВідправлено до: ${where}`, {
             chat_id: callback.message.chat.id,
             message_id: callback.message.message_id,
             reply_markup: {
@@ -40,7 +52,7 @@ module.exports = {
                         }
                     ],
                     [
-                        link.back_button("posts", true)
+                        link.back_button(link.data[1] ? `posts:${link.data[1]}`: `posts:0`, true)
                     ]
                 ]
             }

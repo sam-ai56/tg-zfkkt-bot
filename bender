@@ -1,4 +1,4 @@
 #! /bin/bash
 
 cd rodriges;
-node bender.js $@;
+bun run bender.js $@;

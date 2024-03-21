@@ -6,7 +6,7 @@ const env = process.env;
 module.exports = {
     name: "su_schedule",
     description: "Підписати/відписати розсилку новин для групи.",
-    help_description: "Адміністратор групи може підписати групу на розсилку розкладу. Розклад буде розсилатись за розкладом вибраної групи.",
+    help_description: "Адміністратор групи може підписати/відписати групу на розсилку розкладу. Розклад буде розсилатись за розкладом вибраної групи.",
     type: "all_group_chats",
     chat_id: undefined,
     user_id: undefined,

@@ -1,7 +1,6 @@
 const db = require("./database").sqlite;
 const bot = require("./telegram").bot;
 const bridges = require("./bridges");
-const axios = require("axios");
 const fs = require("fs");
 
 module.exports = {

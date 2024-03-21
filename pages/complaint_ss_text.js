@@ -7,8 +7,8 @@ const middleware = require("../middleware");
 module.exports = {
     name: "complaint_ss_text",
     func (callback) {
-        if (middleware.has_block(link.to, callback.message.chat.id, 10)){
-            bot.editMessageText("Ти можеш відправити лише одну скаргу у 10 хвилин.", {
+        if (middleware.has_block(link.to, callback.message.chat.id, 1)){
+            bot.editMessageText("Ти можеш відправити лише одну скаргу у хвилину.", {
                 chat_id: callback.message.chat.id,
                 message_id: callback.message.message_id,
                 reply_markup: {

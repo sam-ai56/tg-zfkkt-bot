@@ -5,6 +5,7 @@ const env = process.env;
 
 module.exports = {
     name: "admin_menu",
+    access: "admin",
     func (callback) {
         bot.editMessageText("Меню адміністратора.", {
             chat_id: callback.message.chat.id,
@@ -14,17 +15,17 @@ module.exports = {
                     [
                         {
                             text: "Пости",
-                            callback_data: link.gen_link("admin_menu", "posts")
+                            callback_data: link.gen_link("admin_menu", ["posts", 0])
                         },
                         {
                             text: "Журнал аудиту",
-                            callback_data: link.gen_link("admin_menu", "audyt")
+                            callback_data: link.gen_link("admin_menu", ["audyt", 0])
                         },
                     ],
                     [
                         {
                             text: "Інфо для адмінів",
-                            callback_data: link.gen_link("admin_menu", "admin_info")
+                            callback_data: link.gen_link("admin_menu", ["admin_info"])
                         }
                     ],
                     [

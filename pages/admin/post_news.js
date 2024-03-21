@@ -91,9 +91,23 @@ function send_post(post_id, post_content, to_channel, to_groups, callback){
     db.prepare("INSERT INTO AudytLog (user_id, description, post_id, at) VALUES (?, ?, ?, ?)").run(callback.from.id, aydyt_message, post_id, Date.now());
 
     db.prepare("SELECT * FROM User WHERE is_admin = 1").all().forEach((admin) => {
+        if (admin.id == callback.from.id)
+            return;
+
         let is_username = callback.from.username ? true : false;
         const username = is_username? callback.from.username : callback.from.first_name;
-        bot.sendMessage(admin.id, `${aydyt_message} (${is_username? "@" : ""}${username})`);
+        bot.sendMessage(admin.id, `${aydyt_message} (${is_username? "@" : ""}${username})`, {
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        {
+                            text: "Показати",
+                            callback_data: link.gen_link(link.to, ["post_preview", post_id])
+                        }
+                    ]
+                ]
+            }
+        });
     });
 
     const success_message = to_channel && to_groups? "Відправлено до каналу та груп!" : to_channel? "Відправлено до каналу!" : "Відправлено до груп!";
@@ -106,7 +120,7 @@ function send_post(post_id, post_content, to_channel, to_groups, callback){
                 [
                     {
                         text: "Далі",
-                        callback_data: link.gen_link(link.to, "admin_menu")
+                        callback_data: link.gen_link(link.to, ["post_menu", post_id])
                     }
                 ]
             ]
@@ -116,6 +130,7 @@ function send_post(post_id, post_content, to_channel, to_groups, callback){
 
 module.exports = {
     name: "post_news",
+    access: "admin",
     async func (callback) {
         const data = link.data;
         const posted_at = Date.now();

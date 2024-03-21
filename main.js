@@ -1,11 +1,9 @@
-process.env.TZ = "Europe/Kiev"; // config timezone for bun
+process.env.TZ = "Europe/Kiev"; // Налаштування таймзони для bun
 
 require('dotenv').config();
 const env = process.env;
 
 const middleware = require("./middleware");
-
-//const menu = require("./menu");
 
 const database = require("./database");
 const db = database.sqlite;
@@ -26,30 +24,30 @@ command.init();
 const timers = require("./timers");
 timers.init();
 
-function emulate_callback_from_message(message, data) {
-    return {
-        from: message.from,
-        message: message,
-        data: data,
-    }
-}
-
 function open_link(callback) {
     var start_timer = new Date().getTime();
     var data = callback.data.split(":");
-//    var from_start = data[0] == "start";
+    var user_admin = middleware.is_admin(callback.from.id);
+    var user_owner = middleware.is_owner(callback.from.id);
 
-    page.list.forEach((p) => {
+    page.list.every((p) => {
         if (p.link != data[1]){
-            return;
+            return true; // continue
         }
 
-        // if(from_start && p.allow_from_start == undefined)
-        //     return;
-
         var tc = data[0].split("_");
-        if (tc[tc.length - 1 ] == "text")
+        if (tc[tc.length - 1] == "text")
             db.prepare("UPDATE User SET type = ? WHERE id = ?").run(null, callback.from.id);
+    
+        if (!user_admin && p.access == "admin" || !user_owner && p.access == "owner") {
+    	    bot.answerCallbackQuery(callback.id, {
+    		text: "😀🖕 іді нахуй",
+    		show_alert: true
+    	    });
+    	    
+    	    bot.sendMessage(env.OWNER_ID, `${callback.from.first_name} сосе хуй.`);
+	    return false;
+	}
 
         link.from = data[0];
         link.to = data[1];
@@ -62,8 +60,11 @@ function open_link(callback) {
         } catch (error) {
             console.error(error)
         }
+        
         var end_timer = new Date().getTime();
         console.log(`Time: ${(end_timer - start_timer)}ms`);
+        
+        return false; // break
     });
 }
 
@@ -92,40 +93,31 @@ function execute_command(msg) {
     const etc = args.shift().toLowerCase().split("@");
     var cmnd = etc[0].slice(1);
 
-    // if(msg.chat.type != "private"){
-    //     if(etc[1] != "zfkkt_bot")
-    //         return;
-    // }
-
-    //!!!!!!!!!!!!!!!!!!
     if(cmnd == "start" && !args[0])
         cmnd = "menu";
 
-    var is_command_exist = false;
-    command.list.forEach(command => {
+    command.list.every(command => {
         if (command.name != cmnd)
-            return;
-
-        is_command_exist = true;
+            return true;
 
         switch(command.type){
             case "all_group_chats":
                 if(msg.chat.type != "supergroup" && msg.chat.type != "group")
-                    return;
+                    return false;
                 break;
             case "all_private_chats":
                 if(msg.chat.type != "private")
-                    return;
+                    return false;
                 break;
             case "chat" || "chat_administrators":
                 if(command.chat_id != msg.chat.id)
-                    return;
+                    return false;
                 break;
             case "chat_member":
                 if(command.chat_id != msg.chat.id)
-                    return;
+                    return false;
                 if(command.user_id != msg.user_id)
-                    return;
+                    return false;
                 break;
         }
 
@@ -134,6 +126,7 @@ function execute_command(msg) {
         } catch (error) {
             console.log(error);
         }
+        return false;
     });
     // if(!is_command_exist){
     //     if(!etc[1])
@@ -178,8 +171,23 @@ bot.on('message', async (msg) => {
         return;
     }
 
+    console.log(msg);
+
+    // Якщо зфккт бота додали у группу
     if (msg.new_chat_member && msg.new_chat_member.id == bot_info.id) {
-        command.register_commands();
+        bot.sendMessage(msg.chat.id, "Здоров я <b>ЗФККТ БОТ</b>.\nРоблю чері які не робить людина.\n<i>Питають дружину де вона бере команди а вона каже</i> /help\n",{
+            parse_mode: "HTML"
+        });
+        db.prepare("INSERT OR IGNORE INTO GroupChat (id) VALUES (?)").run(msg.chat.id);
+        // command.register_commands();
+    }
+
+    // Якщо пумбу додали у группу
+    if (msg.new_chat_member && msg.new_chat_member.id == 6611370266) {
+        bot.sendMessage(msg.chat.id, "Доров пумбіно\n", {
+            reply_to_message_id: msg.message_id
+        });
+        // command.register_commands();
     }
 
     if (msg.chat.type == "private") {
@@ -195,7 +203,7 @@ bot.on('message', async (msg) => {
 
         const code = link.gen_code("link", msg.text);
 
-        bot.sendMessage(msg.chat.id, `Створено посилання.\n\n<i>посилання можливо видалити за допомогою команди /removelink (посилання)</i>\n\n<code>https://t.me/zfkkt_bot?start=${code}</code>`, {
+        bot.sendMessage(msg.chat.id, `Створено посилання.\n\n<i>посилання можливо видалити за допомогою команди <code>/removelink ${code}</code></i>\n\n<code>https://t.me/zfkkt_bot?start=${code}</code>`, {
             reply_to_message_id: msg.message_id,
             parse_mode: "HTML",
             reply_markup: {
@@ -251,7 +259,7 @@ bot.on('message', async (msg) => {
         return;
     }
 
-    if (msg.chat.type != "private")
+    if (msg.chat.type != "private" || !msg.text)
         return;
 
     const chat_id = msg.chat.id;
@@ -259,6 +267,7 @@ bot.on('message', async (msg) => {
     var data = db.prepare("SELECT type FROM User WHERE id = ?").get(chat_id).type;
     if (!data)
         return;
+
     data = data.split(":");
 
     switch (data[1]) {
@@ -266,7 +275,7 @@ bot.on('message', async (msg) => {
             db.prepare("INSERT INTO BlockList (id, type, time) VALUES (?, ?, ?)").run(chat_id, data[1], date.getTime());
             db.prepare("UPDATE User SET type = ? WHERE id = ?").run(null, chat_id);
             success_message(chat_id, "Твоя пропозиція була відправлена!");
-            send_message_to_group("Пропозиція", msg.text)
+            send_message_to_group(`Пропозиція <i>@${msg.from.username}</i>`, msg.text)
             logger.log(msg, "Sended to group");
             break;
         case 'request_to_join_ss_text':

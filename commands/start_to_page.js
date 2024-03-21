@@ -3,7 +3,6 @@ const bot = require("../telegram").bot;
 const menu = require("../menu");
 const db = require("../database").sqlite;
 const link = require("../link");
-const axios = require("axios");
 
 module.exports = {
     name: "start",
@@ -61,19 +60,21 @@ module.exports = {
                 var result = undefined;
 
                 try {
-                    result = await axios.get(url);
+                    result = await fetch(url);
                 } catch (error) {
                     bot.sendMessage(msg.chat.id, "418 I'm a teapot", {
                         reply_to_message_id: msg.message_id
                     });
                 }
 
+                console.log(result);
+
                 if(!result) {
                     return;
                 }
 
-                if (result.request.res && result.request.res.responseUrl != url) {
-                    url = result.request.res.responseUrl;
+                if (result.ok && result.url != url) {
+                    url = result.url;
                     domen = url.split("/")[2];
                 }
 

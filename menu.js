@@ -7,7 +7,7 @@ module.exports = {
         var def = [
             [
                 {
-                    text: "⚖️ Поскаржитися",
+                    text: "⚖️ Скарга",
                     callback_data: "menu:complaint_menu"
                 },
                 {
@@ -157,7 +157,7 @@ module.exports = {
                 {
                     text: "🤗 Запит на вступ до СС",
                     web_app: {
-                        url: "https://docs.google.com/forms/d/e/1FAIpQLSc0UwAcRtUUcDQj7_gN9eEVz5-sBM6FpWLFfO9lEUPMjSLz8w/viewform"
+                        url: "https://m.youtube.com/watch?v=_4WJCfk0JMQ"
                     }
                 },
                 {

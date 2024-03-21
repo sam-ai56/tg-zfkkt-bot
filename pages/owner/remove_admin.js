@@ -5,6 +5,7 @@ const env = process.env;
 
 module.exports = {
     name: "remove_admin",
+    access: "owner",
     func (callback) {
         const admin_id = link.data[0];
         db.prepare("UPDATE User SET is_admin = 0 WHERE id = ?").run(admin_id);
