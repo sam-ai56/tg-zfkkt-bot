@@ -10,7 +10,7 @@ module.exports = {
             chat_id: callback.message.chat.id,
             message_id: callback.message.message_id,
             reply_markup: {
-                inline_keyboard: menu.ss_menu()
+                inline_keyboard: menu.ss_menu(callback.from.id)
             }
         });
     }

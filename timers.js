@@ -2,12 +2,15 @@ const db = require("./database").sqlite;
 const bot = require("./telegram").bot;
 const bridges = require("./bridges");
 const fs = require("fs");
+const narnia = require("./narnia");
+const gram = require("./gram");
 
 module.exports = {
     init() {
         const date = new Date();
         var time = String(date.getHours()).padStart(2, '0') + ":" + String(date.getMinutes()).padStart(2, '0');
         setInterval(async () => {
+            return;
             const bridge = await bridges.get();
             if(!bridge)
                 return;
@@ -258,7 +261,7 @@ module.exports = {
         }, 60_000);
 
         setInterval(() => {
-            // check if user have non existed group
+            // перевірити, чи немає у користувача неіснуючої групи
             var users = db.prepare(`
                 SELECT User.id, User.[group], User.distribution 
                 FROM User LEFT JOIN [Group] ON User.[group] = [Group].id WHERE [Group].id IS NOT User.[group]
@@ -267,7 +270,7 @@ module.exports = {
                 db.prepare("UPDATE User SET distribution = 0, [group] = NULL WHERE id = ?").run(user.id);
             });
 
-            // check if group have non existed group
+            // перевірити, чи немає неіснуючої групи
             var groups = db.prepare(`
                 SELECT GroupChat.id, GroupChat.[group], GroupChat.schedule_distribution 
                 FROM GroupChat LEFT JOIN [Group] ON GroupChat.[group] = [Group].id WHERE [Group].id IS NOT GroupChat.[group]
@@ -276,11 +279,106 @@ module.exports = {
                 db.prepare("UPDATE GroupChat SET schedule_distribution = 0, [group] = NULL WHERE id = ?").run(group.id);
             });
 
-            // check links expiration if expired delete from db
+            // перевіряємо термін дії посилань, якщо прострочені видаляємо з БД
             var links = db.prepare("SELECT * FROM Link WHERE expired_at < ?").all(new Date().getTime());
             links.forEach((link) => {
                 db.prepare("DELETE FROM Link WHERE id = ?").run(link.id);
             });
         }, 120_000);
+
+        setInterval(() => {
+            // some code
+            let ss_members = db.prepare("SELECT id, ss_groups FROM User WHERE is_ss = 1").all();
+
+            narnia.ss_chats.forEach(async chat_key => {
+                const data = await gram.get_participants(narnia.get_value(chat_key));
+                if (!data)
+                    // break kinda
+                    return;
+
+                const users = data.users.filter(user => !user.bot);
+                const users_id = users.map(user => {
+                    return user.id.toJSNumber();
+                });
+
+                const participants = data.participants.filter(participant => users_id.includes(participant.userId.toJSNumber()));
+                const real_members_id = participants.map(participant => {
+                    return participant.userId.toJSNumber();
+                });
+
+
+                if (chat_key == "ss_main_chat_id") {
+                    const db_members_id = ss_members.map(e => {return e.id});
+
+                    users.forEach(user => {
+                        if(!real_members_id.includes(user.id.toJSNumber()))
+                            return;
+                        db.prepare("INSERT OR IGNORE INTO User (id) VALUES (?)").run(user.id.toJSNumber());
+                        db.prepare("UPDATE User SET username = ?, first_name = ?, last_name = ? WHERE id = ?")
+                        .run(user.username, user.firstName, user.lastName, user.id.toJSNumber());
+                    });
+
+                    ss_members = db.prepare("SELECT id, ss_groups FROM User WHERE is_ss = 1").all();
+
+                    const tumbochka_id = narnia.get_value("ss_tumbochka_channel_id");
+
+                    const tumbochka_data = await gram.get_participants(tumbochka_id);
+
+
+                    const tumbochka_users = tumbochka_data.users.filter(user => !user.bot);
+                    const tumbochka_users_id = tumbochka_users.map(user => {
+                        return user.id.toJSNumber();
+                    });
+
+                    const tumbochka_participants = tumbochka_data.participants.filter(participant => tumbochka_users_id.includes(participant.userId.toJSNumber()));
+                    const tumbochka_members_id = tumbochka_participants.map(participant => {
+                        return participant.userId.toJSNumber();
+                    });
+
+                    const unset_is_ss = db_members_id.filter(id => !real_members_id.includes(id));
+                    const set_is_ss = real_members_id.filter(id => !db_members_id.includes(id));
+
+                    const kick_from_tumbochka = unset_is_ss.filter(async id => await tumbochka_members_id.includes(id));
+
+                    unset_is_ss.forEach(id => {
+                        db.prepare("UPDATE User SET is_ss = 0 WHERE id = ?").run(id);
+                    });
+
+                    kick_from_tumbochka.forEach(id => {
+                        try {
+                            bot.banChatMember(tumbochka_id, id);
+                        } catch(e) {
+                            console.error(e);
+                        }
+                    });
+
+                    set_is_ss.forEach(id => {
+                        db.prepare("UPDATE User SET is_ss = 1 WHERE id = ?").run(id);
+                    });
+
+                    return;
+                }
+
+                const no_group = ss_members.filter(({ss_groups}) => !JSON.parse(ss_groups).includes(chat_key));
+                const add_group = no_group.filter(({id}) => real_members_id.includes(id));
+
+                const have_group = ss_members.filter(({ss_groups}) => JSON.parse(ss_groups).includes(chat_key));
+                const remove_group = have_group.filter(({id}) => !real_members_id.includes(id));
+
+                add_group.forEach(({id, ss_groups}) => {
+                    let parsed = JSON.parse(ss_groups);
+
+                    parsed.push(chat_key);
+
+                    db.prepare("UPDATE User SET ss_groups = ? WHERE id = ?").run(JSON.stringify(parsed), id);
+                });
+
+                remove_group.forEach(({id, ss_groups}) => {
+                    const parsed = JSON.parse(ss_groups).filter(e => e != chat_key);
+
+                    db.prepare("UPDATE User SET ss_groups = ? WHERE id = ?").run(JSON.stringify(parsed), id);
+                });
+            });
+        }, 12_000);
     },
 };

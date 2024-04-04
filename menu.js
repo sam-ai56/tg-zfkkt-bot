@@ -151,8 +151,8 @@ module.exports = {
             ]
         ]
     },
-    ss_menu() {
-        return [
+    ss_menu(id) {
+        let def = [
             [
                 {
                     text: "🤗 Запит на вступ до СС",
@@ -175,12 +175,21 @@ module.exports = {
                     callback_data: link.gen_link(link.to, "pumba_info")
                 }
             ],
-            [
-                {
-                    text: "Назад",
-                    callback_data: link.gen_link(link.to, "menu")
-                }
-            ]
-        ]
+        ];
+
+        if (middleware.is_ss(id))
+            def.push([{
+                text: "🩴 ОЛЬО",
+                callback_data: link.gen_link(link.to, "ss_transmission_menu")
+            }]);
+
+        def.push([
+            {
+                text: "Назад",
+                callback_data: link.gen_link(link.to, "menu")
+            }
+        ]);
+
+        return def;
     }
 }

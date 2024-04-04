@@ -126,8 +126,11 @@ dist
 .yarn/install-state.gz
 .pnp.*
 
+#Bun
 bun.lockb
 
 sqlite.db
 package-lock.json
 help.json
+
+commands/in_group/owner/experemental

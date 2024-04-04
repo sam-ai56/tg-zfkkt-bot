@@ -44,7 +44,7 @@ bot.on('message', (msg) => {
     if (!middleware.debug_mode())
         return;
 
-    if (msg.chat.type != "private")
+    if (!middleware.is_owner(msg.from.id))
         return;
 
     if (msg.animation){

@@ -12,6 +12,9 @@ database.init();
 const bot = require("./telegram").bot;
 const bot_info = await bot.getMe();
 
+const gram = require("./gram");
+await gram.init();
+
 const logger = require("./logger");
 
 const link = require("./link");
@@ -24,11 +27,15 @@ command.init();
 const timers = require("./timers");
 timers.init();
 
+const narnia = require("./narnia");
+narnia.init();
+
 function open_link(callback) {
     var start_timer = new Date().getTime();
     var data = callback.data.split(":");
-    var user_admin = middleware.is_admin(callback.from.id);
-    var user_owner = middleware.is_owner(callback.from.id);
+    const user_admin = middleware.is_admin(callback.from.id);
+    const user_owner = middleware.is_owner(callback.from.id);
+    const user_ss = middleware.is_ss(callback.from.id);
 
     page.list.every((p) => {
         if (p.link != data[1]){
@@ -38,13 +45,25 @@ function open_link(callback) {
         var tc = data[0].split("_");
         if (tc[tc.length - 1] == "text")
             db.prepare("UPDATE User SET type = ? WHERE id = ?").run(null, callback.from.id);
-    
-        if (!user_admin && p.access == "admin" || !user_owner && p.access == "owner") {
+
+        if (tc[tc.length - 1] == "message") {
+            console.log(callback)
+            var state_data = db.prepare("SELECT type FROM User WHERE id = ?").get(callback.from.id).type;
+            // if (!data)
+            //     return;
+
+            state_data = state_data.split(":");
+            bot.sendMessage(narnia.get_value(state_data[2]), `${callback.from.first_name} закінчує пиздіти.`);
+            db.prepare("UPDATE User SET type = ? WHERE id = ?").run(null, callback.from.id);
+        }
+
+        if (p.access == "admin" && !user_admin || p.access == "owner" && !user_owner ||
+        p.access == "ss" && !user_ss) {
     	    bot.answerCallbackQuery(callback.id, {
-    		text: "😀🖕 іді нахуй",
-    		show_alert: true
+                text: "😀🖕 іді нахуй",
+                show_alert: true
     	    });
-    	    
+
     	    bot.sendMessage(env.OWNER_ID, `${callback.from.first_name} сосе хуй.`);
 	    return false;
 	}
@@ -60,10 +79,10 @@ function open_link(callback) {
         } catch (error) {
             console.error(error)
         }
-        
+
         var end_timer = new Date().getTime();
         console.log(`Time: ${(end_timer - start_timer)}ms`);
-        
+
         return false; // break
     });
 }
@@ -100,6 +119,7 @@ function execute_command(msg) {
         if (command.name != cmnd)
             return true;
 
+        console.log(command.type)
         switch(command.type){
             case "all_group_chats":
                 if(msg.chat.type != "supergroup" && msg.chat.type != "group")
@@ -116,7 +136,11 @@ function execute_command(msg) {
             case "chat_member":
                 if(command.chat_id != msg.chat.id)
                     return false;
-                if(command.user_id != msg.user_id)
+                if(command.user_id != msg.from.id)
+                    return false;
+                break;
+            case "owner":
+                if (command.user_id != msg.from.id)
                     return false;
                 break;
         }
@@ -164,69 +188,32 @@ function send_message_to_group(title, text) {
 var posts = [];
 var timer_started = false;
 
+bot.on("my_chat_member", (data) => {
+    if (data.chat.type == "channel" && data.new_chat_member.status == "administrator" && data.from.id == env.OWNER_ID)
+        bot.sendMessage(env.OWNER_ID,
+            `Бота додано до каналу як адміна:\n`+
+            `title: <b>${data.chat.title}</b>, id: <code>${data.chat.id}</code>`,
+            {
+                parse_mode: "HTML"
+            }
+        );
+})
+
 bot.on('message', async (msg) => {
     const date = new Date();
+
     if (msg.text && msg.text.startsWith("/")){
         execute_command(msg);
         return;
     }
 
-    console.log(msg);
+    if (msg.chat.type =="private" && middleware.is_admin(msg.from.id) && db.prepare("SELECT type FROM User WHERE id = ?").get(msg.from.id).type == null) {
 
-    // Якщо зфккт бота додали у группу
-    if (msg.new_chat_member && msg.new_chat_member.id == bot_info.id) {
-        bot.sendMessage(msg.chat.id, "Здоров я <b>ЗФККТ БОТ</b>.\nРоблю чері які не робить людина.\n<i>Питають дружину де вона бере команди а вона каже</i> /help\n",{
-            parse_mode: "HTML"
-        });
-        db.prepare("INSERT OR IGNORE INTO GroupChat (id) VALUES (?)").run(msg.chat.id);
-        // command.register_commands();
-    }
-
-    // Якщо пумбу додали у группу
-    if (msg.new_chat_member && msg.new_chat_member.id == 6611370266) {
-        bot.sendMessage(msg.chat.id, "Доров пумбіно\n", {
-            reply_to_message_id: msg.message_id
-        });
-        // command.register_commands();
-    }
-
-    if (msg.chat.type == "private") {
-        db.prepare("INSERT OR IGNORE INTO User (id) VALUES (?)").run(msg.chat.id);
-    }
-
-    if (msg.chat.type == "private" && msg.text && msg.text.match(/^(http|https):\/\//)) {
-        if(!middleware.is_admin(msg.from.id) && !middleware.is_owner(msg.from.id))
-            return;
-
-        if(msg.text.split("/")[2] == "t.me")
-            return;
-
-        const code = link.gen_code("link", msg.text);
-
-        bot.sendMessage(msg.chat.id, `Створено посилання.\n\n<i>посилання можливо видалити за допомогою команди <code>/removelink ${code}</code></i>\n\n<code>https://t.me/zfkkt_bot?start=${code}</code>`, {
-            reply_to_message_id: msg.message_id,
-            parse_mode: "HTML",
-            reply_markup: {
-                inline_keyboard: [
-                    [
-                        {
-                            text: "Відкрити",
-                            web_app: {
-                                url: msg.text
-                            }
-                        }
-                    ]
-                ]
-            }
-        });
-        return;
-    }
-
-    if (middleware.is_admin(msg.from.id) && msg.chat.type == "private" && db.prepare("SELECT type FROM User WHERE id = ?").get(msg.from.id).type == undefined) {
         posts.push({
             from: msg.from,
             object: msg
         });
+
         if (!timer_started){
             timer_started = true;
             setTimeout(() => {
@@ -259,8 +246,121 @@ bot.on('message', async (msg) => {
         return;
     }
 
-    if (msg.chat.type != "private" || !msg.text)
+    if (msg.chat.id == await narnia.get_value(narnia.ss_chats[0]) && msg.new_chat_member) {
+        const user_first_name = msg.new_chat_member.first_name;
+        const user_id = msg.new_chat_member.id;
+
+        let text = `Привіт ${user_first_name}! Тепер ти новий член CC.... "Тут може бути ваша реклама"`;
+
+        if(middleware.was_in_ss(user_id)) {
+            text = `${user_first_name} з поверненям 🐰🎩`;
+
+            bot.unbanChatMember(narnia.get_value("ss_tumbochka_channel_id"), user_id, {
+                only_if_banned: true
+            });
+        }
+
+        // !!!
+        bot.sendMessage(msg.chat.id, text, {
+            reply_markup: {
+                inline_keyboard: [
+                    narnia.ss_channels.map(channel_key => {
+                        const channel_id = narnia.get_value(channel_key);
+                        const channel_name = narnia.channel_names[channel_key];
+
+                        return {
+                            text: channel_name,
+                            url: `https://t.me/c/${channel_id.toString().slice(4)}`
+                        }
+                    })
+                ]
+            }
+        });
+    }
+
+    if (msg.chat.id == await narnia.get_value(narnia.ss_chats[0]) && msg.left_chat_member) {
+        bot.sendMessage(msg.chat.id, `"А старички все уходят и уходят..."`, {
+            reply_to_message_id: msg.message_id
+        });
+    }
+
+    if (msg.new_chat_member && msg.new_chat_member.id == bot_info.id) {
+        bot.sendMessage(msg.chat.id, "Здоров я <b>ЗФККТ БОТ</b>.\nРоблю речі які не робить людина.\n<i>Питають дружину де вона бере команди а вона каже</i> /help\n",{
+            parse_mode: "HTML"
+        });
+
+        if (narnia.ss_chats.find(e => {return narnia.get_value(e) == msg.chat.id})) {
+            db.prepare("INSERT OR IGNORE INTO GroupChat (id, news_distribution) VALUES (?, 0)").run(msg.chat.id);
+            return;
+        }
+
+        db.prepare("INSERT OR IGNORE INTO GroupChat (id) VALUES (?)").run(msg.chat.id);
+        // command.register_commands();
+    }
+
+    // Якщо пумбу додали у группу
+    if (msg.new_chat_member && msg.new_chat_member.id == 6611370266) {
+        bot.sendMessage(msg.chat.id, "Доров пумбіно\n", {
+            reply_to_message_id: msg.message_id
+        });
+        // command.register_commands();
+    }
+
+    if (msg.chat.type != "private" && msg.reply_to_message) {
+        if (!middleware.is_ss(msg.from.id))
+            return;
+
+        const from_user_message = db.prepare("SELECT * FROM Transmission WHERE sent_to_chat_id = ? AND sent_msg_id = ?").get(msg.chat.id, msg.reply_to_message.message_id);
+        const from_group_message = db.prepare("SELECT * FROM Transmission WHERE original_msg_chat_id = ? AND original_msg_id = ?").get(msg.chat.id, msg.reply_to_message.message_id);
+
+        if (!from_user_message && !from_group_message)
+            return;
+
+        const transmission_message = from_user_message? from_user_message: from_group_message;
+
+        const to_chat_id = from_group_message? from_group_message.sent_to_chat_id: from_user_message.original_msg_chat_id;
+        const reply_message = from_user_message? from_user_message.original_msg_id: from_group_message.sent_msg_id;
+
+        let sent_message = await bot.copyMessage(to_chat_id, msg.chat.id, msg.message_id, {
+            reply_to_message_id: reply_message
+        });
+
+        const sql_query = "INSERT INTO Transmission (user_id, original_msg_chat_id, original_msg_id, sent_msg_id, sent_to_chat_id) VALUES (?, ?, ?, ?, ?)";
+        db.prepare(sql_query).run(msg.from.id, msg.chat.id, msg.message_id, sent_message.message_id, transmission_message.user_id);
+    }
+
+    if (msg.chat.type != "private")
         return;
+
+    db.prepare("INSERT OR IGNORE INTO User (id) VALUES (?)").run(msg.chat.id);
+
+    if (msg.text && msg.text.match(/^(http|https):\/\//)) {
+        if(!middleware.is_admin(msg.from.id) && !middleware.is_owner(msg.from.id))
+            return;
+
+        if(msg.text.split("/")[2] == "t.me")
+            return;
+
+        const code = link.gen_code("link", msg.text);
+
+        bot.sendMessage(msg.chat.id, `Створено посилання.\n\n<i>посилання можливо видалити за допомогою команди <code>/removelink ${code}</code></i>\n\n<code>https://t.me/zfkkt_bot?start=${code}</code>`, {
+            reply_to_message_id: msg.message_id,
+            parse_mode: "HTML",
+            reply_markup: {
+                inline_keyboard: [
+                    [
+                        {
+                            text: "Відкрити",
+                            web_app: {
+                                url: msg.text
+                            }
+                        }
+                    ]
+                ]
+            }
+        });
+        return;
+    }
 
     const chat_id = msg.chat.id;
 
@@ -269,6 +369,33 @@ bot.on('message', async (msg) => {
         return;
 
     data = data.split(":");
+
+
+    switch (data[1]) {
+        case 'ss_transmission_message':
+            const to_chat_id = narnia.get_value(data[2]);
+
+            let sent_message = 0;
+
+            if (msg.reply_to_message) {
+                const from_group_message = db.prepare("SELECT * FROM Transmission WHERE sent_to_chat_id = ? AND sent_msg_id = ?").get(msg.chat.id, msg.reply_to_message.message_id);
+                const from_user_message = db.prepare("SELECT * FROM Transmission WHERE original_msg_chat_id = ? AND original_msg_id = ?").get(msg.chat.id, msg.reply_to_message.message_id);
+
+                sent_message = await bot.copyMessage(to_chat_id, msg.chat.id, msg.message_id, {
+                    reply_to_message_id: from_group_message? from_group_message.original_msg_id: from_user_message.sent_msg_id
+                });
+            } else {
+                sent_message = await bot.copyMessage(to_chat_id, msg.chat.id, msg.message_id);
+            }
+
+            const sql_query = "INSERT INTO Transmission (user_id, original_msg_chat_id, original_msg_id, sent_msg_id, sent_to_chat_id) VALUES (?, ?, ?, ?, ?)";
+            db.prepare(sql_query).run(msg.from.id, msg.chat.id, msg.message_id, sent_message.message_id, to_chat_id);
+            break;
+    }
+
+    /// Тре доробити
+    if (!msg.text)
+        return;
 
     switch (data[1]) {
         case 'offer_text':

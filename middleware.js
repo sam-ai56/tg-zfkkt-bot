@@ -19,6 +19,32 @@ module.exports = {
         return env.OWNER_ID == id;
     },
 
+    is_ss(id){
+        var row = db.prepare("SELECT is_ss FROM User WHERE id = ?").get(id);
+        if (!row) {
+            return false;
+        }
+
+        if (row.is_ss == 0) {
+            return false;
+        }
+
+        return true;
+    },
+
+    was_in_ss(id){
+        var row = db.prepare("SELECT was_in_ss FROM User WHERE id = ?").get(id);
+        if (!row) {
+            return false;
+        }
+
+        if (row.was_in_ss == 0) {
+            return false;
+        }
+
+        return true;
+    },
+
     mantenance_mode() {
         return env.MAINTENANCE == "true";
     },

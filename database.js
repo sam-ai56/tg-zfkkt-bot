@@ -12,7 +12,14 @@ module.exports = {
                     type TEXT,
                     [group] INTEGER DEFAULT NULL,
                     distribution INTEGER NOT NULL DEFAULT 0,
-                    is_admin BOOLEAN NOT NULL DEFAULT 0
+                    is_admin BOOLEAN NOT NULL DEFAULT 0,
+                    is_ss BOOLEAN NOT NULL DEFAULT 0,
+                    was_in_ss BOOLEAN NOT NULL DEFAULT 0,
+                    username TEXT,
+                    first_name TEXT,
+                    last_name TEXT,
+                    ss_groups TEXT DEFAULT "[]",
+                    ss_name TEXT
                 );
 
                 CREATE TABLE IF NOT EXISTS GroupChat (
@@ -136,6 +143,12 @@ module.exports = {
                     original_msg_id INTEGER NOT NULL,
                     sent_msg_id INTEGER NOT NULL,
                     sent_to_chat_id INTEGER NOT NULL
+                );
+
+                CREATE TABLE IF NOT EXISTS BotNarnia (
+                    key TEXT NOT NULL PRIMARY KEY,
+                    value TEXT,
+                    permanent BOOLEAN NOT NULL DEFAULT 0
                 );
             `
         );
